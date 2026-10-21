@@ -1,0 +1,58 @@
+/* gegenereerd door pipeline/gen_demo.py uit het storyboard (pipeline/mockups.py) */
+typedef struct {
+    const char* scene; const char* patch;
+    const char* lines[6]; unsigned char colors[6];
+    unsigned int day, amber, warriors; unsigned char green, night;
+} slide_t;
+
+static const slide_t slides[] = {
+  /* 01 */ { "titel.scn", 0,
+    { 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1 }, 0, 0, 0, 0, 0 },
+  /* 02 */ { "ruimte.scn", 0,
+    { "Ashkara, jaar 812.", "De Hoge Raad stuurt Ilan", "Varo als landvoogd naar", "de amberwoestijn. Wie het", "amber beheerst, beheerst", "de sprongroutes." },
+    { 7, 1, 1, 1, 1, 1 }, 1, 0, 0, 0, 0 },
+  /* 03 */ { "raadzaal.scn", "doran.pat",
+    { "DORAN KEYL", "Het fort is van ons, heer.", "Maar met veertig wachters", "houden we de Citadel van", "het Consortium niet lang", "op afstand." },
+    { 7, 1, 1, 1, 1, 1 }, 1, 0, 0, 0, 0 },
+  /* 04 */ { "balkon.scn", "vesna.pat",
+    { "VESNA ADAIR", "Vorr glimlacht te veel.", "Mijn mensen zien zijn", "schepen 's nachts landen", "bij de oude mijnen. Hij", "wacht op een fout van ons." },
+    { 7, 1, 1, 1, 1, 1 }, 1, 0, 0, 0, 1 },
+  /* 05 */ { "comms.scn", "vorr.pat",
+    { "GOUVERNEUR VORR", "De Raad verwacht de eerste", "Tiende, landvoogd: 500", "amber binnen 15 dagen.", "Ik zou het jammer vinden", "als u zou falen." },
+    { 7, 1, 1, 1, 1, 1 }, 2, 0, 0, 0, 0 },
+  /* 06 */ { "hangar.scn", "mardo.pat",
+    { "DR. ILSE MARDO", "Uw glider staat klaar. Ik", "meet al jaren de diepe", "waterlagen. Ze zakken", "sneller dan het Consortium", "toegeeft." },
+    { 7, 1, 1, 1, 1, 1 }, 2, 0, 0, 0, 0 },
+  /* 07 */ { "kaart.scn", 0,
+    { "BESTEMMING", "> Fort Varo", "  Rode Kloof", "  Diepe Zandzee", "  Zoutvlakte Mer", "  Terug" },
+    { 7, 7, 1, 1, 1, 1 }, 3, 0, 0, 0, 0 },
+  /* 08 */ { "woestijn.scn", 0,
+    { "ONDERWEG", "De glider scheert over de", "duinen. In het zuiden zie", "je een rode kloof.", "> Landen", "  Doorvliegen" },
+    { 7, 1, 1, 1, 7, 1 }, 3, 0, 0, 0, 0 },
+  /* 09 */ { "kloof.scn", "saira.pat",
+    { "SAIRA", "Je draagt laarzen van de", "stad en ruikt naar olie.", "Waarom zou Tarik met een", "landvoogd praten?", "> Ik breng water mee." },
+    { 7, 1, 1, 1, 1, 7 }, 4, 0, 0, 0, 0 },
+  /* 10 */ { "grot.scn", "tarik.pat",
+    { "TARIK UR-KESH", "> Vraag om krijgers", "  Vraag naar het water", "  Bied een geschenk aan", "  Vraag naar andere kampen", "  Vertrek" },
+    { 7, 7, 1, 1, 1, 1 }, 5, 0, 0, 0, 0 },
+  /* 11 */ { "oogst.scn", 0,
+    { "KAMP UR-KESH: OOGST", "Veertig Kethari werken nu", "met de oogstmachine. Ze", "delven 18 amber per dag.", "Let op: de machine trekt", "patrouilles aan." },
+    { 7, 1, 1, 1, 1, 1 }, 7, 36, 40, 0, 0 },
+  /* 12 */ { "nacht.scn", 0,
+    { "SAIRA", "Kijk daar. Waar het amber", "dicht onder het zand ligt,", "gloeien de duinen. Wij", "noemen ze de lichtende", "velden." },
+    { 7, 1, 1, 1, 1, 1 }, 19, 410, 150, 0, 1 },
+  /* 13 */ { "storm.scn", 0,
+    { "HOOFDSTUK 3: VERRAAD", "Het fort brandt. Met Saira", "en een handvol wachters", "vlucht je de storm in. Het", "zand verbergt je, maar het", "vreet aan de glider." },
+    { 7, 1, 1, 1, 1, 1 }, 34, 120, 210, 0, 0 },
+  /* 14 */ { "vesting.scn", 0,
+    { "VOORPOST NOORD", "Garnizoen:          220", "Jouw krijgers:      340", "Uitrusting: zandmessen", "> Aanvallen", "  Terugtrekken" },
+    { 7, 1, 1, 1, 7, 1 }, 52, 260, 340, 4, 1 },
+  /* 15 */ { "oase.scn", 0,
+    { "DR. ILSE MARDO", "Drie seizoenen planten,", "en kijk: het water komt", "terug. Waar het groen", "groeit, kan het Consortium", "niet meer delven." },
+    { 7, 1, 1, 1, 1, 1 }, 71, 300, 520, 18, 0 },
+  /* 16 */ { "einde.scn", 0,
+    { 0, 0, 0, 0, 0, 0 },
+    { 1, 1, 1, 1, 1, 1 }, 0, 0, 0, 0, 0 },
+};
+#define NSLIDES (sizeof(slides) / sizeof(slides[0]))

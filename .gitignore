@@ -1,0 +1,16 @@
+# build output (python build.py game/test)
+build/
+*.o
+*.map
+demo/ashkara
+
+# Python
+__pycache__/
+*.pyc
+
+# editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
