@@ -1,0 +1,10 @@
+# C64-binaries nooit als tekst behandelen
+*.d64 binary
+*.prg binary
+*.scn binary
+*.pat binary
+*.scr binary
+*.chr binary
+*.spr binary
+*.kla binary
+*.png binary
