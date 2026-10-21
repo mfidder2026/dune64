@@ -2,10 +2,11 @@
 #ifndef ASHKARA_GFX_H
 #define ASHKARA_GFX_H
 
-#define LOADBUF  ((unsigned char*)0x8000)   /* 6 KB: gecomprimeerd bestand van disk   */
-#define PATBUF   ((unsigned char*)0x9800)   /* 4 KB: uitgepakte patchset (personage)  */
-#define COLBUF   ((unsigned char*)0xA800)   /* 2 KB: uitgepakt scherm-RAM + kleur-RAM */
-#define SCRIPTBUF ((unsigned char*)0xB000)  /* 4 KB: script/tekst van het hoofdstuk   */
+/* Grenzen bewaakt door build.py (check_buffers); zie DESIGN.md §7 */
+#define LOADBUF  ((unsigned char*)0x8C00)   /* 3,75 KB: gecomprimeerd bestand van disk */
+#define PATBUF   ((unsigned char*)0x9B00)   /* 3 KB: uitgepakte patchset (personage)   */
+#define COLBUF   ((unsigned char*)0xA700)   /* 2 KB: uitgepakt scherm-RAM + kleur-RAM  */
+#define SCRIPTBUF ((unsigned char*)0xAF00)  /* 4 KB: script/tekst van het hoofdstuk    */
 #define SCREEN   ((unsigned char*)0xC000)   /* VIC-bank 3: scherm-matrix              */
 #define SPRPTR   ((unsigned char*)0xC3F8)   /* sprite-pointers                        */
 #define SPRDATA  ((unsigned char*)0xC400)   /* 16 sprites (blokken 16..31)            */

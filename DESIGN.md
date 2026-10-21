@@ -2,7 +2,7 @@
 
 **Platform:** Commodore 64 (PAL), 1541-diskette (D64) · **Taal/toolchain:** C + 6502-assembly met **cc65 2.19**, testen in **VICE 3.7** (`x64sc`) · **Doelgroep van dit document:** de AI-developer die het spel bouwt.
 
-> **Status:** fase 0 t/m **3 (strategielaag)** zijn klaar. Alle schermen bestaan als C64-data in `assets/`; `demo/ashkara-demo.d64` is de schermen-demo. Het spel staat in `src/`, `script/` en `data/`: hoofdstuk 1 is van begin tot eind speelbaar (`python build.py play`): Fort Varo, kaart met markers, reizen, ontdekken onderweg, Saira en Tarik, werven, OOGST, rusten, de eerste Tiende betalen, en game over bij een gemiste Tiende. Fase 3 voegt overvallen van het Consortium toe (vanaf hoofdstuk 2) en opslaan/laden. Daarna kwamen erbij: de **vluchtanimatie** (§4.9) en **tweetaligheid NL/EN** (§9.4). Volgende stap: fase 4 (hoofdstukken 2–5, gevechten, vergroening, eindes). Bouw hierop verder; begin niet opnieuw.
+> **Status:** fase 0 t/m **4 (alle hoofdstukken, gevechten, vergroening, twee eindes)** zijn klaar. Alle schermen bestaan als C64-data in `assets/`; `demo/ashkara-demo.d64` is de schermen-demo. Het spel staat in `src/`, `script/` en `data/`: hoofdstuk 1 is van begin tot eind speelbaar (`python build.py play`): Fort Varo, kaart met markers, reizen, ontdekken onderweg, Saira en Tarik, werven, OOGST, rusten, de eerste Tiende betalen, en game over bij een gemiste Tiende. Fase 3 voegt overvallen van het Consortium toe (vanaf hoofdstuk 2) en opslaan/laden. Daarna kwamen erbij: de **vluchtanimatie** (§4.9) en **tweetaligheid NL/EN** (§9.4). Fase 4 maakt het spel compleet: H2 (verklikker, water, lichtende velden), H3 *Verraad* op dag 34, H4/H5 met gevechten, de handelaars van Mer, windvangers, en een militair en een groen einde. Volgende stap: fase 5 (muziek, fastloader, echte hardware). Bouw hierop verder; begin niet opnieuw.
 
 ---
 
@@ -189,7 +189,7 @@ typedef struct {
 | 0 | Blote handen/messen | — | ×1.0 |
 | 1 | Zandmessen & lansen | 80 | ×1.4 |
 | 2 | Schokgeweren | 200 | ×2.0 |
-| 3 | Zware wapens | 450 | ×3.0 |
+| 3 | Zware wapens | 300 (fase 4: was 450) | ×3.0 |
 | — | Oogstmachine (OOGST ×2) | 120 | — |
 | — | Windvanger (GROEN mogelijk) | 150 | — |
 
@@ -202,10 +202,17 @@ kans_win = kracht / (kracht + garnizoen)        → rnd(0..255) < kans_win × 25
 - **Winst:** de voorpost wordt een kamp (BONDGENOOT, vertrouwen 80), gevangenen komen vrij, en de ondervraagde officier geeft een hint (scriptvlag).
 - **Verlies:** de deelnemende kampen verliezen 50 % `size`. Was Ilan mee, dan is het game over.
 - **Overvallen door het Consortium** (`sim_day`): per OOGST-kamp zonder STRIJD-bescherming binnen 6 cellen is de kans per dag `2 % + 1 % per 20 amber/dag`. Dan wordt het kamp BEZET, vervalt de taak en daalt het vertrouwen met 20, tot je het bevrijdt (fase 4: `@GEVECHT`). **Fase 3:** overvallen beginnen pas na de eerste Tiende (vlag `f_overvallen`, gezet aan het einde van H1). Het overvallen kamp staat in `overval_loc`; de engine-node `overval` meldt het (`{plaats_overval_loc}`). Is er daarna geen enkele bondgenoot meer en minstens één kamp bezet, dan volgt **een dag later** `gameover_bezet`, zodat de speler eerst het bericht ziet. Bezette kampen tonen de node `kamp_bezet` (ook de Rode Kloof). Khimar en Varrak zijn verschoven, zodat Ur-Kesh en Kaim een buurkamp binnen 6 cellen hebben.
-- Garnizoenen: voorposten 120/180/220/300, Citadel 600.
+- Garnizoenen: voorposten 120/180/220/300, Citadel **480** (fase 4: was 600), een bezet kamp 60.
+
+**Fase 4, zoals gebouwd (`battle.c`):** `@GEVECHT` op een voorpost, de Citadel, een bezet kamp of het bezette fort. Je kiest tot 3 bondgenootkampen (vuur = aan/uit) en of Ilan meegaat. De kopregel toont `KRACHT k TEGEN g p%`. Een aanval kost een dag.
+- **Gewonnen:** de deelnemers verliezen 10 %. Een voorpost wordt een kamp (BONDGENOOT, size = garnizoen/8, vertrouwen 80, skill 20, uitrusting 1) en `veroverd` telt op. Na 2 veroverde voorposten verraden de officieren de Citadel (`f_citadel`), en pas dan kan de eindaanval. Een bezet kamp of het fort wordt bevrijd (+30 vertrouwen). Valt de Citadel, dan volgt `einde_militair`.
+- **Verloren:** de deelnemers verliezen 50 %. Was Ilan mee, dan volgt `gameover_gesneuveld`.
+- Uitslagen zijn script-nodes (via `sim_pending`); `{plaats_gevecht_loc}` noemt de plek.
+- **Groei:** na het verraad krijgt elk bondgenootkamp elke 5 dagen 1 krijger erbij (max. 90). Zonder groei blijven kampen na een paar gevechten te klein voor de Citadel (zie §4.10).
 
 ### 4.6 Vergroening (tweede manier om te winnen)
 - `groen%` in het paneel is het gemiddelde van `green` over alle gebieden met een kamp of voorpost.
+- **Fase 4, zoals gebouwd:** de windvanger wordt ontgrendeld op dag 44 (Mardo), kost 150 amber bij Mer en maakt de taak *Vergroenen* mogelijk. Die geeft **+2 groen per dag** (was +1; anders haal je het niet binnen de H4-periode). Bij een voorpost telt het gemiddelde groen van de kampen binnen **8 cellen** (was 6: anders hebben Mijn Noord en de Zoutmijn geen enkel kamp in de buurt), en **bezette kampen tellen niet mee**. Een opgegeven voorpost wordt een kamp met groen 60. Is groen% ≥ 50 en er is geen voorpost meer, dan volgt `einde_groen`. Een groen kamp (≥ 60) toont de scène `OASE` en een groene marker.
 - Een voorpost met een gemiddelde `green >= 60` in een straal van 6 cellen wordt **opgegeven** (status → kamp BONDGENOOT), zonder gevecht.
 - **Winst** met `groen% >= 50` en alle voorposten weg: de Citadel geeft zich over en je krijgt de groene eindtekst. **Militaire winst** door de Citadel te veroveren geeft de militaire eindtekst. Beide eindigen in `EINDE`.
 
@@ -216,6 +223,20 @@ kans_win = kracht / (kracht + garnizoen)        → rnd(0..255) < kans_win × 25
 4. Deadline van de Tiende controleren (§4.4).
 5. Tijd-events uit het script afvuren (`ON_DAY n` → node, §9).
 6. `day++`; nacht/dag wisselen; het paneel bijwerken.
+
+### 4.10 Balans (fase 4): `pipeline/balance.py`
+Een Python-port van `sim_day()` en de gevechten, met een gesimuleerde speler.
+- **Militair:** die speler wervt vóór het verraad kampen (de meeste oogsten, elke derde traint), zet daarna de 4 sterkste op STRIJD, koopt wapens en valt aan bij ≥ 65 % kans: eerst de zwakste voorpost, en de Citadel zodra dat kan.
+- **Groen:** koopt windvangers en laat kampen vergroenen.
+
+Uitslag over 300 seeds (`python pipeline/balance.py 300`):
+
+| Strategie | Gewonnen | Dag (mediaan) | Verloren |
+|---|---|---|---|
+| Militair | 275/300 | 59 | 0 |
+| Groen | 221/300 | 88 | 0 |
+
+De rest haalt het niet binnen 150 dagen; een echte speler kan beide routes mengen (een voorpost veroveren op de groene route). Daarvoor aangepast: zware wapens 300, Citadel 480, groei na het verraad, groen +2/dag, de straal voor het opgeven 8, bezette kampen tellen niet mee.
 
 ### 4.9 Vluchtanimatie (`flight.c`, `pipeline/flight.py`)
 In Cryo's *Dune* is het vliegen met de ornithopter een kenmerkend onderdeel: je kijkt uit de cockpit en de woestijn raast onder je door (de cd-versie verving dat door vooraf gerenderde 3D). ASHKARA doet dat op de C64 met **kleurcycli**: de scène `vlucht.scn` (17 rijen) toont een cockpitraam (zwarte stijlen en een dashboard met wijzers), lucht met tafelbergen en grond die tot aan de horizon in **duinbanden** in perspectief is verdeeld. Elke grondpixel heeft slot `1 + (band mod 3)`. De engine geeft per tekenrij drie kleuren (scherm-RAM hoog/laag, kleur-RAM) en draait die elke 4 frames één plaats door, waardoor de banden naar je toe schuiven. Per stap is dat 10 rijen × 80 bytes `memset`, het bitmap blijft ongemoeid. De golven in de banden (sinus over wereld-x) maken er duinen van; vlak bij de horizon is de rij één kleur (nevel) om moiré te verbergen. Paletten per rij voor dag en nacht staan in `src/flight_tab.h` (gegenereerd). Een reis toont 75 frames per reisdag in de tweede helft van de reis met het nachtpalet; vuur slaat de rest van de animatie over. Bij een ontdekking onderweg vlieg je eerst de helft van de reis, dan verschijnt `WOESTIJN`.
@@ -324,11 +345,13 @@ Het **scherm-RAM** wordt gedeeld: rijen 0–16 bevatten de bitmapkleuren (hoge/l
 |---|---|---|
 | `$0002–$001B` | 26 B | cc65 zero page |
 | `$00FB–$00FE` | 4 B | vrij voor eigen asm (pointers) |
-| `$0801–$7FFF` | ~30 KB | **Programma** (cc65 `MAIN`: code, rodata, data, bss) + C-stack (2 KB, bovenaan tot `$7FFF`). Linkerconfig `demo/dune64.cfg` (`__HIMEM__ = $8000`). |
-| `$8000–$97FF` | 6 KB | `LOADBUF`: gecomprimeerd bestand van disk (grootste nu: `kaart.scn` 3,6 KB) |
-| `$9800–$A7FF` | 4 KB | `PATBUF`: uitgepakte patchset (grootste nu: `tarik.pat` 2,7 KB) |
-| `$A800–$AFFF` | 2 KB | `COLBUF`: uitgepakt scherm- en kleur-RAM (max. 2000 B bij 25 rijen) |
-| `$B000–$BFFF` | 4 KB | `SCRIPTBUF`: scriptblok van het huidige hoofdstuk (§9) |
+| `$0801–$87FF` | ~32 KB | **Programma** (cc65 `MAIN`: code, rodata, data, bss), daarna de C-stack van **1 KB** (`$8800–$8BFF`). Linkerconfig `src/ashkara.cfg` (`__HIMEM__ = $8C00`). Fase 4: het spel eindigt rond `$855A`. |
+| `$8C00–$9AFF` | 3,75 KB | `LOADBUF`: gecomprimeerd bestand van disk (grootste: `kaart.scn` 3575 B) |
+| `$9B00–$A6FF` | 3 KB | `PATBUF`: uitgepakte patchset (grootste: `tarik.pat` 2687 B) |
+| `$A700–$AEFF` | 2 KB | `COLBUF`: uitgepakt scherm- en kleur-RAM (max. 2000 B bij 25 rijen) |
+| `$AF00–$BEFF` | 4 KB | `SCRIPTBUF`: scriptblok van het huidige hoofdstuk (§9) |
+
+In fase 4 is de buffer-indeling compacter gemaakt: het spel groeide met gevechten, handel en tweetalige teksten tot ~32 KB. `build.py` (`check_buffers`) weigert assets die niet in hun buffer passen. **Fase 5 (muziek):** ruimte voor een SID-tune moet nog gevonden worden, bijvoorbeeld door de engine-teksten naar een scriptblok te verplaatsen of `$C600–$C7FF` (vrije spriteblokken) te gebruiken.
 | `$C000–$C3E7` | 1000 B | Scherm-matrix (VIC-bank 3) |
 | `$C3F8–$C3FF` | 8 B | Sprite-pointers |
 | `$C400–$C7FF` | 1 KB | Spritedata, blokken 16–31 (globe 16–23, vrij 24–31: markers/"DRUK OP VUUR") |
@@ -337,8 +360,7 @@ Het **scherm-RAM** wordt gedeeld: rijen 0–16 bevatten de bitmapkleuren (hoge/l
 | `$E000–$FF3F` | 8000 B | Bitmap (onder de Kernal-ROM; schrijven kan altijd, lezen alleen met `$01=$35`) |
 | `$FFFA–$FFFF` | 6 B | RAM-vectoren → RTI-stub (nodig tijdens uitpakken met de Kernal weggebankt) |
 
-**Gebruikt in de demo:** programma `$0801–$2654` (7 KB). Er blijft ruim 20 KB over voor de engine.
-**Fase 5 (muziek):** zet `__HIMEM__` op `$6800`. Dan ligt de stack op `$6000–$67FF`, de SID-tune met player op `$6800–$77FF` en blijft `$7800–$7FFF` vrij voor savegame en state.
+**Gebruikt in de demo:** programma `$0801–$2654` (7 KB); de demo houdt de oude indeling (`demo/src/gfx.h`).
 
 Spelstatus (vlaggen, variabelen, kampen) staat in BSS. Reken op ~600 B, zodat de savegame die blokken 1-op-1 kan wegschrijven (§11.3).
 
@@ -499,6 +521,7 @@ src/
   disk.c/.h     één laadfunctie disk_load(naam, adres); later fastloader hier inpluggen  (fase 1)
   sim.c/.h      sim_day(): taken, Tiende-deadline, events; overvallen/vergroening volgen  (fase 2)
   map.c/.h      kaartscherm: markers, knipperende bestemming, reisdagen, ontdekken (WOESTIJN)  (fase 2)
+  battle.c/.h   @GEVECHT: kampen kiezen, kans, uitslag (fase 4)
   flight.c/.h   vluchtanimatie met kleurcycli (§4.9); flight_tab.h gegenereerd door pipeline/flight.py
   ids.h, data.c gegenereerd door scriptc.py · ui_codes.h: gegenereerd door gen_demo.py
   ashkara.cfg   linkerconfig (kopie van demo/dune64.cfg)
@@ -590,7 +613,7 @@ xvfb-run -a x64sc -default +sound -autostart test.d64 +drive8truedrive -virtuald
 ```
 Let op: in VICE 3.7 levert `-warp` met `-exitscreenshot` een zwart beeld. **VICE 3.9 (Windows) heeft dat probleem niet**; `build.py test` gebruikt daarom `-warp` (9 screenshots in ~20 s).
 
-**Het spel (fase 1+)** compileert met `-DTESTMODE`: de invoer komt dan uit `build/testkeys.h` (gegenereerd uit `TESTS` in `build.py`): één toets per `TEST_RATE` frames (`F` vuur, `U/D/L/R`, `B` RUN/STOP, `K` kaart, `W` wachten). Omdat de teller alleen loopt terwijl de engine op invoer wacht, is het verloop deterministisch, ongeacht de laadtijd. `python build.py test [naam ...]` maakt per test een reeks screenshots `build/test/<test>_<sec>s.png`. Tests: `h1_tiende` (hoofdstuk 1 tot en met de betaalde Tiende; testtoets `A` geeft +500 amber, zodat de test los staat van de balans) en `h1_gameover` (Tiende missen: waarschuwing, uitstel, game over, terug naar de titel), `english` (taalmenu → English, Engelse intro en raadzaal, F7 → terug naar Nederlands), `save_load` (opslaan op dag 1, drie dagen rusten, laden: weer dag 1 in de hangar, daarna `K` = kaart), `days60` (60 speldagen met een oogstend kamp, zonder Tiende) en `raid` (overvallen aan: overval, bericht, een dag later game over). Testtoetsen die alleen in TESTMODE bestaan: `A` +500 amber, `T` Tiende uit, `O` overvallen aan, `S` = F7. Elke screenshot-run krijgt een eigen kopie van de D64. In TESTMODE is de random-seed vast (`srand(1)`). Een rode rand met de dagteller als foutcode betekent een VM-fout (1 = script laden, 2 = conditie, 3 = scène, 4 = patch, 5 = leeg menu, 6 = onbekende opcode).
+**Het spel (fase 1+)** compileert met `-DTESTMODE`: de invoer komt dan uit `build/testkeys.h` (gegenereerd uit `TESTS` in `build.py`): één toets per `TEST_RATE` frames (`F` vuur, `U/D/L/R`, `B` RUN/STOP, `K` kaart, `W` wachten). Omdat de teller alleen loopt terwijl de engine op invoer wacht, is het verloop deterministisch, ongeacht de laadtijd. `python build.py test [naam ...]` maakt per test een reeks screenshots `build/test/<test>_<sec>s.png`. Tests: `h1_tiende` (hoofdstuk 1 tot en met de betaalde Tiende; testtoets `A` geeft +500 amber, zodat de test los staat van de balans) en `h1_gameover` (Tiende missen: waarschuwing, uitstel, game over, terug naar de titel), `verraad` (dag 33 via testtoets `V`, rusten: de aanval, de storm, hoofdstuk 3), `militair` (testtoets `X` = leger klaar met `f_citadel`; naar de Citadel, 3 kampen, eindaanval, militair einde), `groen` (`X` + `G` = alle kampen groen; een dag rusten: voorposten opgegeven, groen einde), `english` (taalmenu → English, Engelse intro en raadzaal, F7 → terug naar Nederlands), `save_load` (opslaan op dag 1, drie dagen rusten, laden: weer dag 1 in de hangar, daarna `K` = kaart), `days60` (60 speldagen met een oogstend kamp, zonder Tiende) en `raid` (overvallen aan: overval, bericht, een dag later game over). Testtoetsen die alleen in TESTMODE bestaan: `A` +500 amber, `T` Tiende uit, `O` overvallen aan, `S` = F7. Elke screenshot-run krijgt een eigen kopie van de D64. In TESTMODE is de random-seed vast (`srand(1)`). Een rode rand met de dagteller als foutcode betekent een VM-fout (1 = script laden, 2 = conditie, 3 = scène, 4 = patch, 5 = leeg menu, 6 = onbekende opcode).
 
 ### 12.4 Wat in fase 0 aantoonbaar werkt (VICE 3.7.1, PAL)
 - Titelscherm (25 rijen) geladen, uitgepakt onder de Kernal, beeld correct.
@@ -640,7 +663,7 @@ python pipeline/c64gfx.py patch art/SCENE.png art/SCENE+X.png art/X_m1.png art/X
 | **1 ✔ Engine-kern** | `input.c`, menu-selectie in `ui.c`, paginering, `vm.c`, `scriptc.py`, `disk.c` | Het voorbeeldscript uit §9.1 is speelbaar: raadzaal → comms → menu-keuzes werken, de tekst pagineert, de mond praat. |
 | **2 ✔ Hoofdstuk 1** | `h1.ash` volledig (§3.1), kaart met markers, reizen, `WOESTIJN`-ontdekking, werven, OOGST, Tiende | H1 is van begin tot eind uit te spelen (eerste Tiende betalen), inclusief game over bij een gemiste Tiende. |
 | **3 ✔ Strategielaag** | `game.c`, `sim.c`, `locations.json`/`datac.py`, overvallen, opslaan/laden | 60 speldagen draaien zonder crash. Opslaan en laden geven dezelfde staat (testscript). |
-| **4 Inhoud H2–H5** | Scripts, extra scènes (handelspost, Citadel-variant, grotvarianten), gevechten, vergroening, twee eindes | Beide eindes zijn bereikbaar. De balans is getest met een gesimuleerde speler (Python-port van `sim_day`). |
+| **4 ✔ Inhoud H2–H5** | Scripts, extra scènes (handelspost, Citadel-variant, grotvarianten), gevechten, vergroening, twee eindes | Beide eindes zijn bereikbaar. De balans is getest met een gesimuleerde speler (Python-port van `sim_day`). |
 | **5 Afwerking** | SID-muziek (eigen compositie), fastloader in `disk.c`, titel-sprites "DRUK OP VUUR", test op echte hardware | Draait op een echte C64 of een C64 Ultimate. Laden < 3 s per scène met de fastloader. |
 
 ---

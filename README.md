@@ -15,8 +15,12 @@ An adventure/strategy game for the **Commodore 64**, inspired by the structure o
   <img src="docs/screenshots/english.png" width="48%" alt="The council hall in English">
 </p>
 <p align="center">
+  <img src="docs/screenshots/battle.png" width="48%" alt="Choosing camps for the final assault on the Citadel">
+  <img src="docs/screenshots/green-ending.png" width="48%" alt="The green ending: the Citadel surrenders">
+</p>
+<p align="center">
   <img src="docs/screenshots/saira.png" width="48%" alt="Saira at the Red Gorge">
-  <img src="docs/screenshots/chapter-end.png" width="48%" alt="End of chapter 1">
+  <img src="docs/screenshots/ending.png" width="48%" alt="Ashkara is free">
 </p>
 
 > The game is fully playable in **English or Dutch**: choose after the title screen, or switch at any time with F7. The world, characters and art are original. Only the *game structure* of Cryo's Dune serves as a reference.
@@ -38,6 +42,9 @@ You are **Ilan Varo**, the new governor of **Ashkara**, a desert planet. Under t
   - recruiting camps (trust, gifts, Tarik's blessing) and giving them jobs (harvest or train);
   - a daily simulation and the Tithe deadline, with one warning before game over;
   - from chapter 2 on, Consortium raids on harvesting camps, unless a training camp guards them.
+- **The whole story:** five chapters, from your arrival through the Consortium's betrayal to the battle for the Citadel. There are **two endings**: conquer the Citadel with your Kethari warriors, or turn the desert green with windcatchers until the Consortium gives up.
+- **Battles:** pick up to three camps (and decide whether Ilan risks joining). Each camp's strength comes from its size, training and weapons from the traders of Mer, and you see your chance of victory before you attack.
+- **Balance-tested:** a Python port of the simulation plays both strategies 300 times. The military route wins in 92% of runs (median day 59), the green route in 74% (median day 88).
 - **Save and load** to disk (`ASHKARA.SAV`), from any menu with F7.
 - **Everything on one 1541 disk:** scenes and portraits are deflate-compressed and unpacked under the Kernal ROM.
 
@@ -49,7 +56,7 @@ You are **Ilan Varo**, the new governor of **Ashkara**, a desert planet. Under t
 | 1 | Engine core: input, menus, text paging, script VM, script compiler | ✅ |
 | 2 | **Chapter 1 playable**: map, travel, discovery, recruiting, harvesting, the first Tithe, game over | ✅ |
 | 3 | Consortium raids, save/load | ✅ |
-| 4 | Chapters 2–5, battles, terraforming, two endings | ⏳ |
+| 4 | Chapters 2–5, battles, terraforming, two endings | ✅ |
 | 5 | SID music, fastloader, real-hardware testing | ⏳ |
 
 ## Play

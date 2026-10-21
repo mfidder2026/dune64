@@ -10,6 +10,7 @@
 extern noderef_t sim_pending;
 
 void          sim_day(void);
+void          sim_pend(const noderef_t* n, unsigned char force);   /* force: gaat voor (game over, einde) */
 unsigned int  sim_yield(const loc_t* l);   /* amber per dag van een OOGST-kamp */
 void          sim_update_totals(void);     /* krijgers en groen % voor het paneel */
 

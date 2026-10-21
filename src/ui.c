@@ -51,6 +51,13 @@ void ui_text_at(unsigned char line, unsigned char col, const char* s, unsigned c
     while (*s && col < TEXT_WIDTH) { put(row, TEXT_COL + col, petscii_to_screen(*s++), color); ++col; }
 }
 
+void ui_sc(const char* s, unsigned char* dst)
+{
+    unsigned char c = 0;
+    while (s[c] && c < TEXT_WIDTH - 1) { dst[c] = petscii_to_screen(s[c]); ++c; }
+    dst[c] = SC_END;
+}
+
 void ui_text(unsigned char line, const char* s, unsigned char color)
 {
     unsigned char c = 0, row = line + 1;
@@ -136,12 +143,15 @@ static const unsigned char sc_end = SC_END;
 
 void (*ui_menu_hook)(unsigned char sel);
 unsigned char ui_menu_keys;
+unsigned char ui_menu_sel;
 
 /* Menu in regels 1..5 met cursor '>'; meer dan 5 opties schuiven mee, met een pijl rechtsonder.
    Links/rechts bladert per 5. */
 unsigned char ui_menu(const unsigned char* const* items, unsigned char n)
 {
-    unsigned char sel = 0, top = 0, i, k, color, ev, redraw = 1;
+    unsigned char sel = ui_menu_sel, top = 0, i, k, color, ev, redraw = 1;
+    ui_menu_sel = 0;
+    if (sel >= n) sel = 0;
     for (;;) {
         if (redraw) {
             if (sel < top) top = sel;

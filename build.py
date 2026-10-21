@@ -27,7 +27,7 @@ EXE = ".exe" if os.name == "nt" else ""
 SCENES = ["titel", "ruimte", "raadzaal", "balkon", "comms", "hangar", "kaart", "woestijn", "kloof",
           "grot", "oogst", "nacht", "storm", "vesting", "oase", "einde", "vlucht"]
 CHARS = ["doran", "vesna", "vorr", "mardo", "saira", "tarik"]
-GAME_SRC = ["main.c", "gfx.c", "ui.c", "input.c", "disk.c", "game.c", "text.c", "vm.c", "builtin.c", "sim.c", "map.c", "flight.c", "data.c", "irq.s"]
+GAME_SRC = ["main.c", "gfx.c", "ui.c", "input.c", "disk.c", "game.c", "text.c", "vm.c", "builtin.c", "sim.c", "map.c", "flight.c", "battle.c", "data.c", "irq.s"]
 
 # Headless tests: invoer (U/D/L/R/F/B/K, W = wachten), één toets per TEST_RATE frames,
 # en de momenten (seconden emulatietijd) waarop een screenshot wordt gemaakt.
@@ -59,6 +59,14 @@ TESTS = {
     # Engels: taalmenu -> English, intro en raadzaal in het Engels, F7 -> taal terug naar Nederlands
     "english": ("F" "DF" "F" "FF" "F" "FF" "W" "S" "DDF" "W" "W",
                 [10, 14, 22, 30, 38, 46, 52]),
+    # Verraad: dag 33 (V), rusten -> dag 34: aanval op het fort, storm, hoofdstuk 3, de grot als basis
+    "verraad": (TO_OOGST + "TV" + RUST_GROT + "F" * 12 + "W", list(range(100, 221, 15))),
+    # militair einde: leger klaar (X), vertrek -> kaart -> De Citadel (16x omlaag), eindaanval met 3 kampen
+    "militair": (TO_OOGST + "X" + "DDDDDDDF" "DDF" + "D" * 16 + "F" + "F" "F" +
+                 "F" "DF" "DF" + "D" * 11 + "F" + "F" * 8 + "W", list(range(110, 261, 15))),
+    # groen einde: leger (X) + alle kampen groen (G), een dag rusten -> voorposten weg, de Citadel geeft op
+    # (X en G pas in het raadzaal-menu: dat hangt er niet van af; dan een dag rusten)
+    "groen": (FORT_START + "DDF" + "XG" + RUST_FORT + "F" * 8 + "W", list(range(60, 131, 10))),
     # 60 speldagen zonder Tiende (T), met oogsten: geen crash, dag ~63
     "days60": (TO_OOGST + "T" + RUST_GROT * 60 + "W", [240, 400, 560, 700]),
     # overvallen aan (O): rusten tot Ur-Kesh overvallen wordt -> bericht -> dag erna game over
@@ -135,6 +143,22 @@ def demo():
     return make_d64(DEMO / "ashkara-demo.d64", "ashkara demo,a1", [prg] + asset_files())
 
 
+# Buffers in het C64-geheugen (src/gfx.h, DESIGN.md §7): de grootste assets moeten erin passen.
+LOADBUF_SIZE, PATBUF_SIZE, SCRIPTBUF_SIZE = 0x9B00 - 0x8C00, 0xA700 - 0x9B00, 0xBF00 - 0xAF00
+
+
+def check_buffers(files):
+    import struct
+    for f in files:
+        data = f.read_bytes()
+        if f.suffix in (".scn", ".pat", ".scr") and len(data) - 2 > LOADBUF_SIZE:
+            sys.exit(f"{f.name}: {len(data) - 2} bytes past niet in LOADBUF ({LOADBUF_SIZE})")
+        if f.suffix == ".pat" and struct.unpack("<H", data[4:6])[0] > PATBUF_SIZE:
+            sys.exit(f"{f.name}: uitgepakt te groot voor PATBUF ({PATBUF_SIZE})")
+        if f.suffix == ".scr" and struct.unpack("<H", data[4:6])[0] > SCRIPTBUF_SIZE:
+            sys.exit(f"{f.name}: uitgepakt te groot voor SCRIPTBUF ({SCRIPTBUF_SIZE})")
+
+
 def game(defines=(), out=None):
     cl65 = need("cl65", "CL65")
     BUILD.mkdir(exist_ok=True)
@@ -148,6 +172,7 @@ def game(defines=(), out=None):
          "-m", out.with_suffix(".map"), "-o", out] + [SRC / f for f in GAME_SRC])
     prg = out
     scr = [ROOT / "assets" / f"{s}{suffix}.scr" for s in scripts() for suffix in ("", "e")]
+    check_buffers(asset_files() + scr)
     return make_d64(out.with_suffix(".d64"), "ashkara,a1", [prg] + asset_files() + scr)
 
 

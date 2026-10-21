@@ -6,6 +6,7 @@
 #include "sim.h"
 #include "text.h"
 #include "map.h"
+#include "battle.h"
 #include "vm.h"
 #include "builtin.h"
 
@@ -105,9 +106,10 @@ static void werven(void)
     txt_show();
 }
 
-static const char* const taak_items[NLANGS][4] = {
-    { "Oogsten", "Strijd oefenen", "Geen taak", "Terug" },
-    { "Harvest", "Train for battle", "No task", "Back" } };
+static const char* const taak_items[NLANGS][5] = {
+    { "Oogsten", "Strijd oefenen", "Geen taak", "Terug", "Vergroenen" },
+    { "Harvest", "Train for battle", "No task", "Back", "Make it green" } };
+static const unsigned char taak_jobs[5] = { JOB_OOGST, JOB_STRIJD, JOB_GEEN, 0xFF, JOB_GROEN };
 
 static void taak(void)
 {
@@ -119,9 +121,18 @@ static void taak(void)
         return;
     }
     txt_title(L("WELKE TAAK?", "WHICH TASK?"));
-    k = ui_menu_str(taak_items[lang], 4);
-    if (k == 3) return;
-    l->job = (k == 0) ? JOB_OOGST : (k == 1) ? JOB_STRIJD : JOB_GEEN;
+    {   /* "Vergroenen" alleen met een windvanger; staat dan boven "Terug" */
+        const char* opts[5];
+        unsigned char map[5], n = 0, j;
+        for (j = 0; j < 5; ++j) {
+            if (j == 4 && !(l->flags & LF_WINDVANGER)) continue;
+            map[n] = j; opts[n++] = taak_items[lang][j];
+        }
+        if (n == 5) { opts[3] = taak_items[lang][4]; map[3] = 4; opts[4] = taak_items[lang][3]; map[4] = 3; }
+        k = map[ui_menu_str(opts, n)];
+    }
+    if (taak_jobs[k] == 0xFF) return;
+    l->job = taak_jobs[k];
     txt_title(L("TAAK", "TASK"));
     txt_begin();
     if (l->job == JOB_OOGST) {
@@ -132,6 +143,9 @@ static void taak(void)
         }
         txt_str(L("Ze delven nu ", "They now mine ")); txt_num(sim_yield(l));
         txt_str(L(" amber per dag. Hoe dieper ze graven, hoe minder de bodem geeft.", " amber per day. The deeper they dig, the less the ground gives."));
+    } else if (l->job == JOB_GROEN) {
+        txt_str(L("De windvanger vangt het vocht uit de nachtlucht. Elke dag wordt het gebied iets groener; geoogst wordt er niet meer.",
+                  "The windcatcher draws moisture from the night air. Every day the area grows a little greener; nobody harvests here any more."));
     } else if (l->job == JOB_STRIJD) {
         txt_str(L("Ze oefenen met messen en lansen. Hun vaardigheid groeit elke dag.", "They train with knives and lances. Their skill grows every day."));
     } else {
@@ -218,6 +232,102 @@ static void opslaan(void)
     else             txt_message(L("OPSLAAN", "SAVE"), L("Opslaan mislukt. Is de diskette beveiligd of vol?", "Saving failed. Is the disk write-protected or full?"));
 }
 
+/* ------------------------------------------------------------------ handel (Mer, vanaf H3) */
+
+static unsigned char camp_idx[NLOCS];
+static const unsigned char* camp_items[NLOCS + 1];
+static unsigned char back_buf[8];
+
+/* kies een bondgenootkamp; MAP_CANCEL bij "Terug" */
+static unsigned char choose_camp(const char* title)
+{
+    unsigned char i, n = 0, k;
+    for (i = 0; i < NLOCS; ++i)
+        if (locs[i].type == LT_KAMP && locs[i].status == ST_BONDGENOOT) {
+            camp_idx[n] = i;
+            camp_items[n++] = loc_names[lang][i];
+        }
+    if (!n) {
+        txt_message(title, L("Je hebt nog geen kampen.", "You have no camps yet."));
+        return MAP_CANCEL;
+    }
+    ui_sc(L("Terug", "Back"), back_buf);
+    camp_items[n] = back_buf;
+    txt_title(title);
+    k = ui_menu(camp_items, n + 1);
+    return (k == n) ? MAP_CANCEL : camp_idx[k];
+}
+
+static unsigned char pay(unsigned int price, const char* title)
+{
+    if (vars[VAR_AMBER] < price) {
+        txt_begin();
+        txt_str(L("Dat kost ", "That costs ")); txt_num(price);
+        txt_str(L(" amber. Je hebt er ", " amber. You have ")); txt_num(vars[VAR_AMBER]); txt_str(".");
+        txt_title(title);
+        txt_show();
+        return 0;
+    }
+    vars[VAR_AMBER] -= price;
+    game_draw_status();
+    return 1;
+}
+
+static const unsigned int weapon_price[3] = { 80, 200, 300 };
+static const char* const weapon_name[NLANGS][3] = {
+    { "zandmessen en lansen", "schokgeweren", "zware wapens" },
+    { "sand knives and lances", "shock rifles", "heavy weapons" } };
+
+static void handel(void)
+{
+    const char* opts[4];
+    unsigned char n = 0, k, c;
+    loc_t* l;
+    opts[n++] = L("Wapens voor een kamp", "Weapons for a camp");
+    opts[n++] = L("Oogstmachine (120)", "Harvester (120)");
+    if (flag_get(FLAG_F_WINDVANGER)) opts[n++] = L("Windvanger (150)", "Windcatcher (150)");
+    opts[n++] = L("Terug", "Back");
+    txt_title(L("HANDELAARS VAN MER", "TRADERS OF MER"));
+    k = ui_menu_str(opts, n);
+    if (k == n - 1) return;
+    c = choose_camp(L("VOOR WELK KAMP?", "FOR WHICH CAMP?"));
+    if (c == MAP_CANCEL) return;
+    l = &locs[c];
+    txt_begin();
+    if (k == 0) {
+        if (l->equip >= 3) { txt_message(L("WAPENS", "WEAPONS"), L("Dit kamp heeft al de zwaarste wapens.", "This camp already has the heaviest weapons.")); return; }
+        if (!pay(weapon_price[l->equip], L("WAPENS", "WEAPONS"))) return;
+        txt_str(weapon_name[lang][l->equip]);
+        ++l->equip;
+        txt_str(L(" voor ", " for ")); txt_name(c); txt_str(L(". Hun kracht is nu ", ". Their strength is now "));
+        txt_num(battle_power(l)); txt_str(".");
+    } else if (k == 1) {
+        if (l->flags & LF_HARVESTER) { txt_message(L("OOGSTMACHINE", "HARVESTER"), L("Dat kamp heeft er al een.", "That camp already has one.")); return; }
+        if (!pay(120, L("OOGSTMACHINE", "HARVESTER"))) return;
+        l->flags |= LF_HARVESTER;
+        txt_str(L("Een oogstmachine voor ", "A harvester for ")); txt_name(c); txt_str(L(": dubbele opbrengst.", ": double yield."));
+    } else {
+        if (l->flags & LF_WINDVANGER) { txt_message(L("WINDVANGER", "WINDCATCHER"), L("Dat kamp heeft er al een.", "That camp already has one.")); return; }
+        if (!pay(150, L("WINDVANGER", "WINDCATCHER"))) return;
+        l->flags |= LF_WINDVANGER;
+        txt_str(L("Een windvanger voor ", "A windcatcher for ")); txt_name(c);
+        txt_str(L(". Geef ze de taak Vergroenen.", ". Give them the task Make it green."));
+    }
+    txt_title(L("HANDEL", "TRADE"));
+    txt_show();
+}
+
+/* ------------------------------------------------------------------ einde */
+
+static void einde(void)
+{
+    vm_char(0);
+    vm_scene(SCENE_EINDE);             /* volledig scherm (25 rijen): geen paneel */
+    vm_show();
+    ui_wait_fire();
+    longjmp(restart, 1);
+}
+
 static void gameover(void)
 {
     vm_char(0);
@@ -239,7 +349,9 @@ void builtin(unsigned char id)
     case BI_GAMEOVER: gameover(); break;
     case BI_OPSLAAN:  opslaan(); break;
     case BI_LADEN:    laden(); break;
-    case BI_GEVECHT:  txt_message(L("AANVAL", "ATTACK"), L("Met wachters en messen win je geen vesting. Later, landvoogd.", "Guards and knives will not take a fortress. Later, governor.")); break;
+    case BI_GEVECHT:  battle(); break;
+    case BI_HANDEL:   handel(); break;
+    case BI_EINDE:    einde(); break;
     default:          txt_message(L("NOG NIET GEBOUWD", "NOT BUILT YET"), L("Deze functie volgt later.", "This feature comes later.")); break;
     }
 }

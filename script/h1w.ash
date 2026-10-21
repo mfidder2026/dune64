@@ -8,6 +8,9 @@
   IF KAMP HIER = BEZET
     JUMP kamp_bezet
   END
+  IF h1_klaar AND NOT saira_nacht
+    JUMP saira_nacht
+  END
   SCENE kloof
   CHAR saira
   IF NOT saira_ontmoet
@@ -83,9 +86,17 @@
     OPT "Bied een geschenk aan" "Offer a gift"     @GESCHENK
     OPT "Vraag naar andere kampen" "Ask about other camps" tarik_kampen
     OPT "Status van het kamp" "Camp status"        @STATUS
+    OPT "Praat met Doran" "Talk to Doran"          grot_doran      IF f_doran_terug
+    OPT "Praat met Mardo" "Talk to Mardo"          grot_mardo      IF f_verraad
     OPT "Rust een dag" "Rest for a day"            @RUST
     OPT "Vertrek" "Leave"                          kloof
   END
+
+:grot_doran
+  JUMP doran_h4
+
+:grot_mardo
+  JUMP mardo_h4
 
 :tarik_krijgers
   SAY "TARIK UR-KESH"
@@ -126,7 +137,11 @@
   IF KAMP HIER = BEZET
     JUMP kamp_bezet
   END
-  SCENE grot
+  IF GROEN >= 60
+    SCENE oase
+  ELSE
+    SCENE grot
+  END
   CHAR none
   SAY "KAMP {loc}" "CAMP {loc}"
   MENU
@@ -151,13 +166,16 @@
   END
 
 :voorpost
+  IF KAMP HIER = BONDGENOOT
+    JUMP kamp
+  END
   SCENE vesting
   CHAR none
   SAY "{loc}"
   TEXT "Een voorpost van het Consortium. Geschut op de muren, patrouilles in het zand. Met wachters alleen kom je hier niet binnen."
     EN "A Consortium outpost. Guns on the walls, patrols in the sand. With guards alone you will never get in."
   MENU
-    OPT "Aanvallen" "Attack"                       @GEVECHT
+    OPT "Aanvallen" "Attack"                       @GEVECHT     IF f_verraad
     OPT "Kaart" "Map"                              @KAART
   END
 
@@ -165,9 +183,15 @@
   SCENE vesting
   CHAR none
   SAY "DE CITADEL" "THE CITADEL"
-  TEXT "De Citadel van Kasimir Vorr. Hoge muren, zwaar geschut. Nog lang niet."
-    EN "The Citadel of Kasimir Vorr. High walls, heavy guns. Not for a long time yet."
+  IF f_citadel
+    TEXT "De Citadel van Kasimir Vorr. Dankzij de officieren weet je waar de schilden zwak zijn. Dit is de laatste slag."
+      EN "The Citadel of Kasimir Vorr. Thanks to the officers you know where its shields are weak. This is the final battle."
+  ELSE
+    TEXT "De Citadel van Kasimir Vorr. Hoge muren, zwaar geschut, schilden. Zonder te weten waar ze zwak is, begin je hier niets."
+      EN "The Citadel of Kasimir Vorr. High walls, heavy guns, shields. Without knowing where it is weak, you cannot do anything here."
+  END
   MENU
+    OPT "Eindaanval" "Final assault"               @GEVECHT     IF f_citadel
     OPT "Kaart" "Map"                              @KAART
   END
 
@@ -175,8 +199,14 @@
   SCENE woestijn
   CHAR none
   SAY "ZOUTVLAKTE MER" "MER SALT FLAT"
-  TEXT "Lege kramen in het zout. De handelaars van Mer komen pas als er iets te verdienen valt."
-    EN "Empty stalls in the salt. The traders of Mer only come when there is profit to be made."
+  IF f_verraad
+    TEXT "Tussen de zoutpilaren staan kramen vol wapens, onderdelen en vreemde machines. De handelaars van Mer vragen niet voor wie je vecht."
+      EN "Between the salt pillars stand stalls full of weapons, parts and strange machines. The traders of Mer do not ask whom you fight for."
+  ELSE
+    TEXT "Lege kramen in het zout. De handelaars van Mer komen pas als er iets te verdienen valt."
+      EN "Empty stalls in the salt. The traders of Mer only come when there is profit to be made."
+  END
   MENU
+    OPT "Handelen" "Trade"                         @HANDEL      IF f_verraad
     OPT "Kaart" "Map"                              @KAART
   END

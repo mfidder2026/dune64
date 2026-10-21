@@ -32,8 +32,10 @@ Afwijkingen/aanvullingen op de tabel in §9.2 (bewust, zie DESIGN.md):
   JUMP naar een node in een ander blok wordt LOAD script-id node
   SKIP   offset (2)          relatieve sprong vooruit (ELSE); JUMP is voor nodes
   TRUST  delta (1, signed)   vertrouwen van het kamp op de huidige locatie (0..100)
+  LOCSTATUS loc status (1+1) status van een locatie zetten (bron: LOCSTATUS <id|HIER> <STATUS>)
+  LET    var waarde16          variabele zetten (bron: LET <var> <getal|locatie-id>)
   cond $06 var var2 (>=)  $07 var var2 (<)  $08 c1 c2 (EN)  $09 var waarde16 (=)
-       $0A c (NIET)  $0B n (vertrouwen huidige locatie >= n)
+       $0A c (NIET)  $0B n (vertrouwen huidige locatie >= n)  $0C n (groen huidige locatie >= n)
        $05 loc status: loc $FF = huidige locatie
 """
 import os, re, sys, zlib, struct, argparse
@@ -45,7 +47,7 @@ import datac
 
 OP = dict(SCENE=0x01, CHAR=0x02, SAY=0x03, TEXT=0x04, MENU=0x05, JUMP=0x06, IF=0x07, SET=0x08, CLR=0x09,
           ADD=0x0A, CALL=0x0B, WAIT=0x0C, TIENDE=0x0D, ONDAY=0x0E, LOAD=0x0F, MUSIC=0x10, SKIP=0x11,
-          TRUST=0x12, END=0xFF)
+          TRUST=0x12, LOCSTATUS=0x13, LET=0x14, END=0xFF)
 BUILTINS = ["KAART", "TIENDE", "WERVEN", "TAAK", "GEVECHT", "HANDEL", "OPSLAAN", "EINDE",
             "STATUS", "RUST", "GESCHENK", "PRAAT", "GAMEOVER", "LADEN"]
 CAMP_STATUS = datac.LOC_STATUS
@@ -200,6 +202,11 @@ class Compiler:
             self.err(where, f"onbekende {kind} '{name}' (voeg toe aan script/ids.txt)")
         return self.ids[kind][name]
 
+    def loc_ref(self, name, where):
+        if name == "HIER": return HERE_LOC
+        if name in self.loc_index: return self.loc_index[name]
+        self.err(where, f"onbekende locatie '{name}' (zie data/locations.json)")
+
     def node_ref(self, node):
         """(script-id, raw-offset) van een node; pas geldig na compile_block van alle blokken."""
         b = self.node_block[node]
@@ -218,10 +225,10 @@ class Compiler:
         if toks[0] == "KAMP":
             if len(toks) != 4 or toks[2] != "=" or toks[3] not in CAMP_STATUS:
                 self.err(where, "verwacht: KAMP HIER|<locatie-id> = " + "|".join(CAMP_STATUS))
-            if toks[1] == "HIER": loc = HERE_LOC
-            elif toks[1] in self.loc_index: loc = self.loc_index[toks[1]]
-            else: self.err(where, f"onbekende locatie '{toks[1]}' (zie data/locations.json)")
-            return bytes([0x05, loc, CAMP_STATUS.index(toks[3])])
+            return bytes([0x05, self.loc_ref(toks[1], where), CAMP_STATUS.index(toks[3])])
+        if toks[0] == "GROEN":
+            if len(toks) != 3 or toks[1] != ">=": self.err(where, "verwacht: GROEN >= <n>")
+            return bytes([0x0C, int(toks[2])])
         if toks[0] == "VERTROUWEN":
             if len(toks) != 3 or toks[1] != ">=": self.err(where, "verwacht: VERTROUWEN >= <n>")
             return bytes([0x0B, int(toks[2])])
@@ -379,6 +386,14 @@ class Compiler:
                 blk.code += bytes([OP[op], self.lookup("flag", toks[1], where)])
             elif op == "ADD":
                 blk.code += bytes([OP[op], self.lookup("var", toks[1], where)]) + struct.pack("<h", int(toks[2]))
+            elif op == "LOCSTATUS":
+                if len(toks) != 3 or toks[2] not in CAMP_STATUS: self.err(where, "LOCSTATUS <id|HIER> <STATUS>")
+                blk.code += bytes([OP[op], self.loc_ref(toks[1], where), CAMP_STATUS.index(toks[2])])
+            elif op == "LET":
+                if len(toks) != 3: self.err(where, "LET <var> <getal|locatie-id>")
+                v = self.lookup("var", toks[1], where)
+                val = int(toks[2]) if re.fullmatch(r"-?\d+", toks[2]) else self.loc_ref(toks[2], where)
+                blk.code += bytes([OP[op], v]) + struct.pack("<H", val & 0xFFFF)
             elif op == "TRUST":
                 blk.code += bytes([OP[op]]) + struct.pack("<b", int(toks[1]))
             elif op == "CALL":

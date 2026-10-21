@@ -61,6 +61,9 @@
 
 ; ---------------------------------------------------------------- balkon
 :balkon
+  IF h1_klaar AND NOT verklikker
+    JUMP vesna_verklikker
+  END
   SCENE balkon
   CHAR vesna
   IF NOT vesna_ontmoet
@@ -168,6 +171,12 @@
 
 ; ---------------------------------------------------------------- hangar
 :hangar
+  IF KAMP fort = BEZET
+    JUMP fort_bezet
+  END
+  IF h1_klaar AND NOT mardo_water
+    JUMP mardo_water_h2
+  END
   SCENE hangar
   CHAR mardo
   IF NOT mardo_ontmoet

@@ -4,41 +4,51 @@
 const char* const scene_files[] = { 0, "titel.scn", "ruimte.scn", "raadzaal.scn", "balkon.scn", "comms.scn", "hangar.scn", "kaart.scn", "woestijn.scn", "kloof.scn", "grot.scn", "oogst.scn", "nacht.scn", "storm.scn", "vesting.scn", "oase.scn", "einde.scn", "vlucht.scn" };
 const char* const char_files[] = { 0, "doran.pat", "vesna.pat", "vorr.pat", "mardo.pat", "saira.pat", "tarik.pat" };
 const char* const script_files[NLANGS][NSCRIPTS] = {
-    { "h1.scr", "h1w.scr" },
-    { "h1e.scr", "h1we.scr" }
+    { "h1.scr", "h1w.scr", "h2.scr", "h4.scr" },
+    { "h1e.scr", "h1we.scr", "h2e.scr", "h4e.scr" }
 };
 
 /* engine-nodes (ids.txt 'node') en aankomst-nodes per locatie: script-id, offset */
 const noderef_t enodes[] = {
-    { 0, 0x0119 },   /* tiende_waarschuwing */
-    { 0, 0x013C },   /* gameover_tiende */
-    { 0, 0x0124 },   /* overval */
-    { 0, 0x012F },   /* gameover_bezet */
+    { 0, 0x0125 },   /* tiende_waarschuwing */
+    { 0, 0x0148 },   /* gameover_tiende */
+    { 0, 0x0130 },   /* overval */
+    { 0, 0x013B },   /* gameover_bezet */
+    { 3, 0x0051 },   /* gevecht_gewonnen */
+    { 3, 0x0075 },   /* gevecht_verloren */
+    { 3, 0x006A },   /* kamp_bevrijd */
+    { 3, 0x0080 },   /* gameover_gesneuveld */
+    { 3, 0x008D },   /* voorpost_verlaten */
+    { 3, 0x0098 },   /* einde_groen */
+    { 3, 0x00A8 },   /* einde_militair */
 };
 const noderef_t loc_nodes[] = {
-    { 0, 0x0149 },   /* fort -> hangar */
+    { 0, 0x0155 },   /* fort -> hangar */
     { 1, 0x0003 },   /* urkesh -> kloof */
-    { 1, 0x0108 },   /* sheb -> kamp */
-    { 1, 0x0108 },   /* kaim -> kamp */
-    { 1, 0x0108 },   /* telmoran -> kamp */
-    { 1, 0x0108 },   /* khesset -> kamp */
-    { 1, 0x0108 },   /* iruun -> kamp */
-    { 1, 0x0108 },   /* varrak -> kamp */
-    { 1, 0x0108 },   /* daresh -> kamp */
-    { 1, 0x0108 },   /* shaal -> kamp */
-    { 1, 0x0108 },   /* khimar -> kamp */
-    { 1, 0x0108 },   /* irtessa -> kamp */
-    { 1, 0x0108 },   /* oenvaro -> kamp */
-    { 1, 0x015B },   /* mijnnoord -> voorpost */
-    { 1, 0x015B },   /* mijnoost -> voorpost */
-    { 1, 0x015B },   /* zoutmijn -> voorpost */
-    { 1, 0x015B },   /* diepemijn -> voorpost */
-    { 1, 0x0171 },   /* citadel -> citadel */
-    { 1, 0x0182 },   /* mer -> mer */
+    { 1, 0x0128 },   /* sheb -> kamp */
+    { 1, 0x0128 },   /* kaim -> kamp */
+    { 1, 0x0128 },   /* telmoran -> kamp */
+    { 1, 0x0128 },   /* khesset -> kamp */
+    { 1, 0x0128 },   /* iruun -> kamp */
+    { 1, 0x0128 },   /* varrak -> kamp */
+    { 1, 0x0128 },   /* daresh -> kamp */
+    { 1, 0x0128 },   /* shaal -> kamp */
+    { 1, 0x0128 },   /* khimar -> kamp */
+    { 1, 0x0128 },   /* irtessa -> kamp */
+    { 1, 0x0128 },   /* oenvaro -> kamp */
+    { 1, 0x0185 },   /* mijnnoord -> voorpost */
+    { 1, 0x0185 },   /* mijnoost -> voorpost */
+    { 1, 0x0185 },   /* zoutmijn -> voorpost */
+    { 1, 0x0185 },   /* diepemijn -> voorpost */
+    { 1, 0x01A5 },   /* citadel -> citadel */
+    { 1, 0x01C7 },   /* mer -> mer */
 };
 
 /* ON_DAY-regels op topniveau van alle blokken: game_init() zet ze klaar */
 const event_t init_events[] = {
+    { 34, { 2, 0x0070 } },   /* verraad */
+    { 40, { 3, 0x000D } },   /* doran_terug */
+    { 44, { 3, 0x001A } },   /* mardo_windvanger */
     { 0, { NO_SCRIPT, 0 } }
 };
 
@@ -61,7 +71,7 @@ const loc_t loc_init[] = {
     { 2, 35, 10, 1,  45,   0, 0, 0, 0,   0, 0, 0x00 },   /* mijnoost */
     { 2,  9, 15, 1,  55,   0, 0, 0, 0,   0, 0, 0x00 },   /* zoutmijn */
     { 2, 28,  2, 1,  75,   0, 0, 0, 0,   0, 0, 0x00 },   /* diepemijn */
-    { 3, 21,  1, 1, 150,   0, 0, 0, 0,   0, 0, 0x00 },   /* citadel */
+    { 3, 21,  1, 1, 120,   0, 0, 0, 0,   0, 0, 0x00 },   /* citadel */
     { 4,  5,  4, 1,   0,   0, 0, 0, 0,   0, 0, 0x00 },   /* mer */
 };
 

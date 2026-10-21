@@ -17,6 +17,7 @@
 enum {
     OP_SCENE = 0x01, OP_CHAR, OP_SAY, OP_TEXT, OP_MENU, OP_JUMP, OP_IF, OP_SET, OP_CLR,
     OP_ADD, OP_CALL, OP_WAIT, OP_TIENDE, OP_ONDAY, OP_LOAD, OP_MUSIC, OP_SKIP, OP_TRUST,
+    OP_LOCSTATUS, OP_LET,
     OP_END = 0xFF
 };
 
@@ -112,6 +113,7 @@ static unsigned char cond(void)
     case 0x09: a = *pc++; v = rd16(); return vars[a] == v;
     case 0x0A: return !cond();
     case 0x0B: return HERE->trust >= *pc++;
+    case 0x0C: return HERE->green >= *pc++;
     }
     fail(2);
     return 0;
@@ -256,6 +258,13 @@ void vm_run(unsigned char script, unsigned int node)
             v = HERE->trust + (signed char)a;
             HERE->trust = ((int)v < 0) ? 0 : (v > 100) ? 100 : (unsigned char)v;
             break;
+        case OP_LOCSTATUS:
+            a = *pc++;
+            if (a == HERE_LOC) a = (unsigned char)vars[VAR_LOC];
+            locs[a].status = *pc++;
+            sim_update_totals();
+            break;
+        case OP_LET:   a = *pc++; vars[a] = rd16(); game_draw_status(); break;
         case OP_CALL:
             builtin(*pc++);
             if (vm_next.script != NO_SCRIPT || sim_pending.script != NO_SCRIPT) redirect();

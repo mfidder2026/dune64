@@ -18,7 +18,7 @@
     {"id": "mijnoost",  "name": "Mijn Oost", "name_en": "East Mine",      "type": "VOORPOST", "x": 35, "y": 10, "status": "BEKEND",   "node": "voorpost", "size": 45},
     {"id": "zoutmijn",  "name": "Zoutmijn", "name_en": "Salt Mine",       "type": "VOORPOST", "x": 9,  "y": 15, "status": "BEKEND",   "node": "voorpost", "size": 55},
     {"id": "diepemijn", "name": "Diepe Mijn", "name_en": "Deep Mine",     "type": "VOORPOST", "x": 28, "y": 2,  "status": "BEKEND",   "node": "voorpost", "size": 75},
-    {"id": "citadel",   "name": "De Citadel", "name_en": "The Citadel",     "type": "CITADEL",  "x": 21, "y": 1,  "status": "BEKEND",   "node": "citadel",  "size": 150},
+    {"id": "citadel",   "name": "De Citadel", "name_en": "The Citadel",     "type": "CITADEL",  "x": 21, "y": 1,  "status": "BEKEND",   "node": "citadel",  "size": 120},
     {"id": "mer",       "name": "Zoutvlakte Mer", "name_en": "Mer Salt Flat", "type": "HANDEL",   "x": 5,  "y": 4,  "status": "BEKEND",   "node": "mer"}
   ]
 }

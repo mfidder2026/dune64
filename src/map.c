@@ -34,6 +34,8 @@ static unsigned char n_items, last_sel, blink_on;
 static unsigned char marker_color(unsigned char i)
 {
     const loc_t* l = &locs[i];
+    if (l->status == ST_BEZET) return (l->type == LT_FORT) ? COL_RED : COL_PURPLE;
+    if (l->type == LT_KAMP && l->green >= 60) return COL_GRN;
     switch (l->type) {
     case LT_FORT:     return COL_WHT;
     case LT_VOORPOST:

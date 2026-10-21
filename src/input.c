@@ -14,6 +14,28 @@ static unsigned char prev, held;
 static unsigned int test_i;
 static unsigned char test_t;
 
+static void test_army(void)
+{
+    unsigned char i;
+    for (i = 0; i < NLOCS; ++i) {
+        if (locs[i].type != LT_KAMP) continue;
+        locs[i].status = ST_BONDGENOOT;
+        locs[i].size = 90; locs[i].skill = 100; locs[i].equip = 3; locs[i].job = JOB_GEEN;
+    }
+    flag_set(FLAG_F_VERRAAD); flag_set(FLAG_F_CITADEL); flag_set(FLAG_F_WINDVANGER);
+    flag_clr(FLAG_TIENDE_OPEN);
+    vars[VAR_AMBER] = 2000;
+}
+
+static void test_green(void)
+{
+    unsigned char i;
+    for (i = 0; i < NLOCS; ++i) {
+        if (locs[i].type != LT_KAMP) continue;
+        locs[i].green = 70; locs[i].flags |= LF_WINDVANGER; locs[i].job = JOB_GROEN;
+    }
+}
+
 static unsigned char test_poll(void)
 {
     unsigned char c;
@@ -35,6 +57,9 @@ static unsigned char test_poll(void)
     case 'T': flag_clr(FLAG_TIENDE_OPEN); return 0;        /* geen Tiende: lange runs */
     case 'O': flag_set(FLAG_F_OVERVALLEN); return 0;       /* overvallen nu al aan */
     case 'S': return IN_DISK;                              /* F7 */
+    case 'V': vars[VAR_DAY] = 33; return 0;                /* volgende dag: Verraad (dag 34) */
+    case 'X': test_army(); return 0;                       /* klaar voor H4/H5 */
+    case 'G': test_green(); return 0;                      /* alle kampen groen */
     }
     return 0;             /* 'W' en de rest: wachten */
 }

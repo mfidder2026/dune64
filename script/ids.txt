@@ -33,6 +33,8 @@ char tarik
 ; --- scriptblokken (bestand: assets/<naam>.scr, bron: script/<naam>.ash) ---
 script h1
 script h1w
+script h2
+script h4
 
 ; --- variabelen (16 bit); de engine kent ze via VAR_* in src/ids.h ---
 var day
@@ -45,6 +47,8 @@ var groen
 var nacht
 var loc
 var overval_loc
+var gevecht_loc
+var veroverd
 
 ; --- vlaggen ---
 flag doran_ontmoet
@@ -63,9 +67,23 @@ flag tarik_ontmoet
 flag oogstmachine
 flag h1_klaar
 flag f_overvallen
+flag saira_nacht
+flag verklikker
+flag verklikker_vals
+flag mardo_water
+flag f_doran_terug
+flag f_windvanger
+flag f_citadel
 
 ; --- engine-nodes: nodes die de engine zelf aanroept (sim.c) ---
 node tiende_waarschuwing
 node gameover_tiende
 node overval
 node gameover_bezet
+node gevecht_gewonnen
+node gevecht_verloren
+node kamp_bevrijd
+node gameover_gesneuveld
+node voorpost_verlaten
+node einde_groen
+node einde_militair
