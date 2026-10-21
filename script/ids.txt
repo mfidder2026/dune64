@@ -1,0 +1,66 @@
+; ids.txt - namen -> id's voor scriptc.py (DESIGN.md §9.3).
+; Per regel: <soort> <naam>. Het id is de volgorde binnen de soort.
+; scene en char tellen vanaf 1 (0 = geen); script, var en flag vanaf 0.
+; Voeg nieuwe namen ALTIJD onderaan hun soort toe: id's staan in savegames.
+
+; --- scènes (bestand: assets/<naam>.scn) ---
+scene titel
+scene ruimte
+scene raadzaal
+scene balkon
+scene comms
+scene hangar
+scene kaart
+scene woestijn
+scene kloof
+scene grot
+scene oogst
+scene nacht
+scene storm
+scene vesting
+scene oase
+scene einde
+
+; --- personages (bestand: assets/<naam>.pat) ---
+char doran
+char vesna
+char vorr
+char mardo
+char saira
+char tarik
+
+; --- scriptblokken (bestand: assets/<naam>.scr, bron: script/<naam>.ash) ---
+script h1
+script h1w
+
+; --- variabelen (16 bit); de engine kent ze via VAR_* in src/ids.h ---
+var day
+var amber
+var tiende_eis
+var tiende_dag
+var tiende_n
+var krijgers
+var groen
+var nacht
+var loc
+
+; --- vlaggen ---
+flag doran_ontmoet
+flag vesna_ontmoet
+flag vorr_eis
+flag mardo_ontmoet
+flag glider
+flag f_tarik_zegen
+flag f_verbinding
+flag f_verraad
+flag tiende_open
+flag tiende_uitstel
+flag saira_ontmoet
+flag saira_mee
+flag tarik_ontmoet
+flag oogstmachine
+flag h1_klaar
+
+; --- engine-nodes: nodes die de engine zelf aanroept (sim.c) ---
+node tiende_waarschuwing
+node gameover_tiende
