@@ -254,18 +254,16 @@ FIRSTBUF = $9700                    ; LOADBUF (src/gfx.h): kladruimte voor het e
 _fl_load:
         sta ptr1
         stx ptr1+1
+        ldy #0                      ; fromfile = (addr == 0)
         ora ptr1+1
         bne :+
-        lda #1
-        .byte $2C                   ; bit abs: sla de volgende lda over
-:       lda #0
-        sta fromfile
-        beq :+
-        lda #<FIRSTBUF
+        iny
+        lda #<FIRSTBUF              ; eerste blok eerst naar de kladruimte
         sta ptr1
         lda #>FIRSTBUF
         sta ptr1+1
-:       jsr popax
+:       sty fromfile
+        jsr popax
         sta ptr2
         stx ptr2+1
         jsr getbank

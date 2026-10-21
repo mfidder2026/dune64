@@ -13,6 +13,7 @@ unsigned char disk_save(const char* name, const void* addr, unsigned int size);
 
 /* Fastloader: drivecode staat (na het laden van extra.bin) onder de I/O; installeren lukt
    alleen als de drive 1541-code draait en op de ping antwoordt. */
+void          disk_init(void);          /* eerst: fastloader al actief via de bootloader? */
 void          disk_set_drive_code(void);
 unsigned char disk_fast_install(void);
 unsigned char disk_fast_active(void);

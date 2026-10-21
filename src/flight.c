@@ -9,6 +9,7 @@
 #include "vm.h"
 #include "flight.h"
 #include "flight_tab.h"
+#include "sound.h"
 
 #define FLIGHT_SPEED 4     /* frames per cyclus-stap */
 
@@ -37,6 +38,7 @@ void flight_begin(void)
     tick = 0;
     paint_all();
     vm_show();
+    sfx(SFX_WHOOSH);
 }
 
 void flight_night(unsigned char night)

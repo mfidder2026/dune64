@@ -4,6 +4,7 @@
 #include "gfx.h"
 #include "ui.h"
 #include "input.h"
+#include "sound.h"
 
 #define PSCR (SCREEN + PANEL_ROW * 40)
 #define PCOL (COLRAM + PANEL_ROW * 40)
@@ -173,11 +174,11 @@ unsigned char ui_menu(const unsigned char* const* items, unsigned char n)
         if (ui_menu_hook) ui_menu_hook(sel);
         ui_wait_frame();
         ev = input_poll();
-        if ((ev & IN_UP) && sel) { --sel; redraw = 1; }
-        if ((ev & IN_DOWN) && sel + 1 < n) { ++sel; redraw = 1; }
+        if ((ev & IN_UP) && sel) { --sel; redraw = 1; sfx(SFX_TICK); }
+        if ((ev & IN_DOWN) && sel + 1 < n) { ++sel; redraw = 1; sfx(SFX_TICK); }
         if (ev & IN_LEFT) { sel = (sel > 5) ? sel - 5 : 0; redraw = 1; }
         if (ev & IN_RIGHT) { sel = (sel + 5 < n) ? sel + 5 : n - 1; redraw = 1; }
-        if (ev & IN_FIRE) return sel;
+        if (ev & IN_FIRE) { sfx(SFX_SELECT); return sel; }
         if (ui_menu_keys && (ev & IN_DISK)) return MENU_KEY_DISK;
         if (ui_menu_keys && (ev & IN_MAP)) return MENU_KEY_MAP;
     }

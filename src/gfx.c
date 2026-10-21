@@ -3,6 +3,7 @@
 #include <zlib.h>
 #include "gfx.h"
 #include "disk.h"
+#include "sound.h"
 
 #define MAGIC_SCENE 0x53   /* 'S' als ruwe byte (niet als C-tekenliteral: cc65 vertaalt naar PETSCII) */
 #define MAGIC_PATCH 0x50   /* 'P' */
@@ -38,6 +39,7 @@ unsigned char gfx_load_scene(const char* name)
 
     if (disk_load(name, LOADBUF) == 0 || LOADBUF[0] != MAGIC_SCENE)
         return 0;
+    sound_hold(1);                     /* uitpakken: de IRQ staat even uit */
     rows  = LOADBUF[1];
     bmlen = LOADBUF[4] | ((unsigned int)LOADBUF[5] << 8);
 
@@ -59,6 +61,7 @@ unsigned char gfx_load_scene(const char* name)
        bitmap (resten van een volledig scherm zoals de titel) in plaats van het paneel. */
     if (n < 25) memset(BITMAP + n * 320, 0, 320);
     scene_rows = rows;
+    sound_hold(0);
     return rows;
 }
 
@@ -66,7 +69,9 @@ unsigned char gfx_load_patch(const char* name)
 {
     if (disk_load(name, LOADBUF) == 0 || LOADBUF[0] != MAGIC_PATCH)
         return 0;
+    sound_hold(1);
     inflatemem(PATBUF, LOADBUF + 4);
+    sound_hold(0);
     return PATBUF[0];
 }
 

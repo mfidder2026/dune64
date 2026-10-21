@@ -5,6 +5,7 @@
 #include <string.h>
 #include "gfx.h"
 #include "disk.h"
+#include "sound.h"
 
 #define DRIVE_ADDR 0x0500
 #define MW_CHUNK   32
@@ -83,12 +84,25 @@ static void fast_quit(void)
 
 unsigned char disk_fast_active(void) { return fast; }
 
+/* De bootloader (src/boot/boot.s) laat "FL" op $02FC achter als hij het spel via de fastloader
+   heeft geladen: de drivecode draait dan al en kanaal 15 is open. */
+#define BOOT_MAGIC ((unsigned char*)0x02FC)
+
+void disk_init(void)
+{
+    if (BOOT_MAGIC[0] == 0x46 && BOOT_MAGIC[1] == 0x4C) fast = 1;
+    BOOT_MAGIC[0] = 0;
+}
+
 void disk_set_drive_code(void) { have_code = 1; }
 
 unsigned int disk_load(const char* name, void* addr)
 {
-    if (fast) return fl_load(name, addr);
-    return cbm_load(name, drive(), addr);
+    unsigned int n;
+    sound_hold(1);
+    n = fast ? fl_load(name, addr) : cbm_load(name, drive(), addr);
+    sound_hold(0);
+    return n;
 }
 
 unsigned char disk_save(const char* name, const void* addr, unsigned int size)

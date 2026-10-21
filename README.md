@@ -46,6 +46,7 @@ You are **Ilan Varo**, the new governor of **Ashkara**, a desert planet. Under t
 - **Battles:** pick up to three camps (and decide whether Ilan risks joining). Each camp's strength comes from its size, training and weapons from the traders of Mer, and you see your chance of victory before you attack.
 - **Balance-tested:** a Python port of the simulation plays both strategies 300 times. The military route wins in 92% of runs (median day 59), the green route in 74% (median day 88).
 - **Original SID music:** "Amberwind", in D harmonic minor, with bass, arpeggio and lead. The player runs in the raster interrupt; switch it on or off with F7.
+- **Sound effects:** clicks in menus, a whoosh at takeoff, and an alarm on raids. F1 toggles the music and F3 the effects, anywhere in the game. Music and effects go silent while something loads.
 - **Own fastloader:** a 2-bit loader whose timing is driven by the C64, so it also works with the screen on, sprites and interrupts, on PAL and NTSC. Scenes load in under 3 seconds, more than twice as fast as the Kernal. It automatically falls back to the Kernal if the drive isn't a 1541 (SD2IEC, etc.).
 - **Save and load** to disk (`ASHKARA.SAV`), from any menu with F7.
 - **Everything on one 1541 disk:** scenes and portraits are deflate-compressed and unpacked under the Kernal ROM.
@@ -69,12 +70,12 @@ Download the game's `.d64` from the [latest release](https://github.com/mfidder2
 x64sc -autostart ashkara.d64
 ```
 
-On a real C64 or a C64 Ultimate, mount the D64 and `LOAD"*",8,1` / `RUN`. The main program loads through the Kernal (~16 KB, compressed); after that the game installs its own fastloader on a 1541. Keep only drive 8 switched on while playing (the fastloader uses the ATN line).
+On a real C64 or a C64 Ultimate, mount the D64 and `LOAD"*",8,1` / `RUN`. A small boot program loads first; it installs the fastloader on a 1541 and loads the game with it. The screen shows `P` and `F` when that works, or `K` when it falls back to the Kernal (for example on an SD2IEC). Keep only drive 8 switched on while playing (the fastloader uses the ATN line).
 
 ### Real hardware
 The game has been tested in VICE with cycle-exact 1541 emulation (true drive emulation), on PAL and NTSC, but not yet on a real machine. To check your setup, use the diagnostic disk from the release (or `python build.py fltest`). `fltest.d64` loads a few files via the Kernal and via the fastloader and compares length, checksum and load time; it should report "5 van 5 goed".
 
-**Controls:** joystick in port 2 or the cursor keys to choose, and fire, Return or Space to confirm or turn the page. On the map, left/right pages through the destinations. **K** opens the map, and **F7** opens the save/load/language menu. You can also load a saved game from the start menu after the title screen.
+**Controls:** joystick in port 2 or the cursor keys to choose, and fire, Return or Space to confirm or turn the page. On the map, left/right pages through the destinations. **K** opens the map, **F7** opens the save/load/language menu, **F1** toggles the music and **F3** the sound effects. You can also load a saved game from the start menu after the title screen.
 
 **Tips:** one camp alone can't harvest 500 amber in time, so explore and recruit a second camp. After the first Tithe, the Consortium starts raiding harvesting camps; a camp that trains (STRIJD) protects every camp within 6 cells.
 

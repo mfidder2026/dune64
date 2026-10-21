@@ -197,17 +197,20 @@ def game(defines=(), out=None):
     raw = out.with_name("ashkara.raw")
     run([cl65, "-t", "c64", "-O", "-I", SRC, "-I", BUILD, *flags, "-C", SRC / "ashkara.cfg",
          "-m", out.with_suffix(".map"), "-o", raw] + [SRC / f for f in GAME_SRC])
+    # het spel heet op de diskette "main"; "ashkara" (eerste bestand) is de bootloader
+    main = out.with_name("main")
     exo = find_tool("exomizer", "EXOMIZER")
-    if exo:      # zelfuitpakkend en half zo groot: laadt op een echte 1541 twee keer zo snel
-        run([exo, "sfx", "sys", "-q", "-o", out, raw])
+    if exo:      # zelfuitpakkend en half zo groot
+        run([exo, "sfx", "sys", "-q", "-o", main, raw])
     else:
-        shutil.copyfile(raw, out)
-    print(f"ashkara: {raw.stat().st_size} B -> {out.stat().st_size} B op de diskette")
-    prg = out
+        shutil.copyfile(raw, main)
+    run([cl65, "-t", "c64", "-C", SRC / "boot" / "boot.cfg", "--bin-include-dir", BUILD,
+         "-o", out, SRC / "boot" / "boot.s", SRC / "fastload.s"])
+    print(f"main: {raw.stat().st_size} B -> {main.stat().st_size} B; bootloader {out.stat().st_size} B")
     scr = [ROOT / "assets" / f"{s}{suffix}.scr" for s in scripts() for suffix in ("", "e")]
     check_buffers(asset_files() + scr)
     if len(xtra.read_bytes()) - 2 > LOADBUF_SIZE: sys.exit("extra.bin past niet in LOADBUF")
-    return make_d64(out.with_suffix(".d64"), "ashkara,a1", [prg] + asset_files() + scr + [xtra], FILE_INTERLEAVE)
+    return make_d64(out.with_suffix(".d64"), "ashkara,a1", [out, main] + asset_files() + scr + [xtra], FILE_INTERLEAVE)
 
 
 def vice(d64):
@@ -220,9 +223,9 @@ def fltest():
     run([sys.executable, PIPE / "scriptc.py"])
     xtra = extra()
     prg = BUILD / "fltest"
-    run([cl65, "-t", "c64", "-O", "-I", SRC, "-o", prg, ROOT / "tests" / "fltest.c", SRC / "disk.c", SRC / "fastload.s"])
+    run([cl65, "-t", "c64", "-O", "-I", SRC, "-o", prg, ROOT / "tests" / "fltest.c", SRC / "disk.c", SRC / "fastload.s", SRC / "music.s"])
     a = ROOT / "assets"
-    files = [prg, xtra, a / "ui.chr", a / "titel.scn", a / "h1.scr", a / "kaart.scn"]
+    files = [prg, xtra, a / "ui.chr", a / "titel.scn", a / "h1.scr", a / "kaart.scn", a / "globe.spr"]
     return make_d64(BUILD / "fltest.d64", "fltest,a1", files, FILE_INTERLEAVE)
 
 

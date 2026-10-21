@@ -2,6 +2,7 @@
    Met -DTESTMODE komt de invoer uit src/testkeys.h (headless testen in VICE, DESIGN.md §12.3). */
 #include <cbm.h>
 #include "input.h"
+#include "sound.h"
 
 #define REPEAT_DELAY 20   /* frames vasthouden voor de eerste herhaling */
 #define REPEAT_RATE  6
@@ -94,6 +95,8 @@ unsigned char input_poll(void)
     case 0x4B:                          /* k */
     case 0xCB: ev |= IN_MAP;   break;   /* K */
     case 0x88: ev |= IN_DISK;  break;   /* F7 */
+    case 0x85: music_set(!music_on); sfx(SFX_SELECT); break;   /* F1: muziek aan/uit */
+    case 0x86: sfx_on ^= 1; sfx(SFX_SELECT); break;            /* F3: geluidseffecten */
     }
     return ev;
 }

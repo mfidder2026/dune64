@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "game.h"
 #include "sim.h"
+#include "sound.h"
 
 noderef_t sim_pending = { NO_SCRIPT, 0 };
 
@@ -68,6 +69,7 @@ static void raids(void)
                 vars[VAR_OVERVAL_LOC] = i;
                 raided = 1;
                 sim_pend(&enodes[ENODE_OVERVAL], 0);
+                sfx(SFX_ALARM);
             }
         }
         if (l->status == ST_BONDGENOOT) ++allies;

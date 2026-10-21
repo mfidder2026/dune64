@@ -8,6 +8,7 @@
 #include "sim.h"
 #include "text.h"
 #include "battle.h"
+#include "sound.h"
 
 #define MAX_SIDE        3
 #define GARRISON_BEZET  60      /* bezet kamp: een kleine wacht */
@@ -172,6 +173,7 @@ void battle(void)
         }
     } else {
         hurt(1);
+        sfx(SFX_ALARM);
         sim_pend(&enodes[ilan ? ENODE_GAMEOVER_GESNEUVELD : ENODE_GEVECHT_VERLOREN], 1);
     }
     sim_update_totals();

@@ -13,9 +13,7 @@
 
 jmp_buf restart;
 
-void music_init(void);                 /* music.s */
-void music_silence(void);
-extern unsigned char music_on;
+#include "sound.h"
 
 #define EXTRA_NAME   "extra.bin"       /* drivecode + muziek, hoort onder de I/O ($D000) */
 #define FIRE_SPR     24                /* spriteblokken 24-27 "DRUK OP VUUR", 28-31 "PRESS FIRE" */
@@ -86,6 +84,7 @@ static void title(void)
 
 int main(void)
 {
+    disk_init();
     gfx_init();
     gfx_load_raw("ui.chr");            /* -> $C800 (laadadres in bestand) */
     gfx_load_raw("globe.spr");         /* -> $C400 */

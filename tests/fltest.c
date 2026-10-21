@@ -13,7 +13,7 @@
 /* jiffy-klok van de Kernal: 1/60 s */
 #define JIFFY (*(unsigned char*)0xA2 | (*(unsigned char*)0xA1 << 8))
 
-static const char* const files[] = { "ui.chr", "titel.scn", "h1.scr", "kaart.scn", "bestaatniet" };
+static const char* const files[] = { "ui.chr", "titel.scn", "h1.scr", "kaart.scn", "bestaatniet", "globe.spr" };
 #define NFILES (sizeof(files) / sizeof(files[0]))
 
 static unsigned int ref_len[NFILES], ref_sum[NFILES], ref_t[NFILES];
@@ -67,7 +67,13 @@ int main(void)
         secs(ft);
         cprintf("s %s\r\n", good ? "ok" : "FOUT");
     }
-    cprintf("\r\n%u van %u goed\r\ntotaal kernal ", ok, (unsigned char)NFILES);
+    /* laadadres uit het bestand (addr == 0), zoals de bootloader "main" laadt: globe.spr -> $C400 */
+    memset((void*)0xC400, 0, 1024);
+    n = disk_load("globe.spr", 0);
+    good = (n == ref_len[NFILES - 1] && sum((unsigned char*)0xC400, n) == ref_sum[NFILES - 1]);
+    ok += good;
+    cprintf("globe.spr naar eigen adres: %u %04x %s\r\n", n, sum((unsigned char*)0xC400, n), good ? "ok" : "FOUT");
+    cprintf("\r\n%u van %u goed\r\ntotaal kernal ", ok, (unsigned char)(NFILES + 1));
     secs(kt);
     cprintf("s, fastloader ");
     secs(ftot);

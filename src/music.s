@@ -1,6 +1,6 @@
-; music.s - kleine SID-player (DESIGN.md §6, fase 5). music_play draait 1x per frame vanuit de
-; raster-IRQ (onderrand, irq.s). De muziekdata (pipeline/music.py) ligt in de RAM onder de I/O,
-; zodat ze geen programmageheugen kost: lezen met $01=$34, de SID schrijven met $01=$35.
+; music.s - kleine SID-player met geluidseffecten (DESIGN.md §6). music_play draait 1x per frame
+; vanuit de raster-IRQ (onderrand, irq.s). De muziekdata (pipeline/music.py) ligt in de RAM onder
+; de I/O, zodat ze geen programmageheugen kost: lezen met $01=$34, de SID schrijven met $01=$35.
 ;
 ; Data op MUSIC_BASE:
 ;   +0        tempo (frames per tick)
@@ -9,8 +9,14 @@
 ;   +47..+142 frequentie lo voor noot 0..95; +143..+238 frequentie hi
 ;   stemmen:  $00-$5F noot + duur (ticks) | $60 rust + duur | $70+i instrument i |
 ;             $FF terug naar het begin van de stem
+;
+; Geluid stil (sound_hold): tijdens laden en uitpakken staat de IRQ soms seconden uit (SEI); dan
+; zou de SID op de laatste toon blijven hangen. sound_hold(1) zet alle stemmen uit en het volume
+; op 0, sound_hold(0) zet het terug; de teller maakt nesten mogelijk.
+; Effecten (sfx) spelen op stem 3; de melodie loopt in de tijd door en krijgt daarna haar
+; instrument terug.
 
-        .export _music_init, _music_on, _music_silence, music_play
+        .export _music_init, _music_on, _music_set, _sfx_on, _sfx, _sound_hold, music_play
 
 MUSIC_BASE = $D200
 VSTART     = MUSIC_BASE + 1
@@ -18,24 +24,38 @@ INSTR      = MUSIC_BASE + 7
 FREQLO     = MUSIC_BASE + 47
 FREQHI     = MUSIC_BASE + 143
 SID        = $D400
+V3         = SID + 14               ; stem 3 (effecten)
 ZPTR       = $FB                    ; $FB/$FC: vrij voor eigen asm (DESIGN.md §7)
 
         .segment "DATA"
 _music_on:  .byte 0                 ; 0 = stil; de engine zet hem aan na music_init
+_sfx_on:    .byte 1                 ; geluidseffecten aan
 
         .segment "BSS"
 vptr_lo:    .res 3
 vptr_hi:    .res 3
 vdur:       .res 3
 vwave:      .res 3
+vinstr:     .res 3                  ; laatste instrument per stem (terugzetten na een effect)
 tick:       .res 1
 old01:      .res 1
 cur_v:      .res 1
 tmp_y:      .res 1
 ins_b:      .res 5
+hold:       .res 1                  ; > 0: alles stil
+sfx_t:      .res 1                  ; frames over van het lopende effect (0 = geen)
+sfx_f:      .res 1                  ; frequentie (hoog byte)
+sfx_s:      .res 1                  ; glijden per frame (signed)
+sfx_w:      .res 1                  ; golfvorm
 
         .segment "RODATA"
 voff:       .byte 0, 7, 14          ; SID-registeroffset per stem
+; effecten: golfvorm, AD, SR, frequentie (hoog), glijden, frames
+;   0 tik (menu), 1 keuze, 2 opstijgen (ruis), 3 alarm (overval, nederlaag)
+sfx_tab:    .byte $10, $00, $00, $30,   0,  2
+            .byte $40, $00, $00, $18,   6,  6
+            .byte $80, $0A, $00, $06,   1, 45
+            .byte $20, $00, $F0, $28, $FD, 30
 
         .segment "CODE"
 
@@ -61,7 +81,18 @@ vstart_ptr:
         ldy #0
         rts
 
-; ------------------------------------------------------------------ init (vanuit C)
+; C = 1 als stem cur_v nu van een effect is (dan de SID niet aanraken)
+vbusy:  lda cur_v
+        cmp #2
+        bne @no
+        lda sfx_t
+        beq @no
+        sec
+        rts
+@no:    clc
+        rts
+
+; ------------------------------------------------------------------ vanuit C
 _music_init:
         lda $01
         sta old01
@@ -94,21 +125,109 @@ _music_init:
         sta SID + $18               ; volume
         rts
 
-_music_silence:
-        lda #0
-        ldx #$18
-@c:     sta SID,x
-        dex
-        bpl @c
+; void __fastcall__ music_set(unsigned char on): muziek aan (opnieuw vanaf het begin) of uit
+_music_set:
+        sta _music_on
+        cmp #0
+        bne _music_init
+        ldx #0                      ; uit: gates van de muziekstemmen dicht
+@g:     ldy voff,x
+        lda vwave,x
+        sta SID + 4,y
+        inx
+        cpx #3
+        bne @g
         rts
+
+; void __fastcall__ sound_hold(unsigned char on)
+_sound_hold:
+        cmp #0
+        beq @release
+        inc hold
+        lda hold
+        cmp #1
+        bne @done
+        lda #0                      ; eerste hold: alles stil
+        sta sfx_t
+        sta SID + 4
+        sta SID + 11
+        sta SID + 18
+        sta SID + $18
+@done:  rts
+@release:
+        lda hold
+        beq @done
+        dec hold
+        bne @done
+        lda #$0F
+        sta SID + $18
+        rts
+
+; void __fastcall__ sfx(unsigned char id)
+_sfx:
+        ldx _sfx_on
+        beq @done
+        ldx hold
+        bne @done
+        sta tmp_y                   ; x6
+        asl a
+        adc tmp_y
+        asl a
+        tax
+        sei
+        lda #0
+        sta V3 + 4                  ; gate uit
+        lda sfx_tab,x
+        sta sfx_w
+        lda sfx_tab + 1,x
+        sta V3 + 5
+        lda sfx_tab + 2,x
+        sta V3 + 6
+        lda sfx_tab + 3,x
+        sta sfx_f
+        sta V3 + 1
+        lda #0
+        sta V3
+        sta V3 + 2
+        lda #$08
+        sta V3 + 3                  ; pulsbreedte 50 %
+        lda sfx_tab + 4,x
+        sta sfx_s
+        lda sfx_tab + 5,x
+        sta sfx_t
+        lda #$0F
+        sta SID + $18
+        lda sfx_w
+        ora #$01
+        sta V3 + 4
+        cli
+@done:  rts
 
 ; ------------------------------------------------------------------ per frame (in de IRQ)
 music_play:
-        lda _music_on
-        bne :+
+        lda hold
+        beq :+
         rts
 :       lda $01
         sta old01
+        lda sfx_t                   ; lopend effect: glijden, en aan het eind melodie terug
+        beq @music
+        dec sfx_t
+        bne @slide
+        lda sfx_w
+        sta V3 + 4                  ; gate uit
+        lda #2
+        sta cur_v
+        lda vinstr + 2
+        jsr instrument
+        jmp @music
+@slide: lda sfx_f
+        clc
+        adc sfx_s
+        sta sfx_f
+        sta V3 + 1
+@music: lda _music_on
+        beq @out
         dec tick
         bpl @out
         lda #<MUSIC_BASE            ; tempo
@@ -127,6 +246,9 @@ music_play:
         lda vdur,x
         cmp #1
         bne @nextv
+        jsr vbusy
+        bcs @nextv
+        ldx cur_v
         ldy voff,x                  ; laatste tick: gate los (release)
         lda vwave,x
         sta SID + 4,y
@@ -170,11 +292,14 @@ music_play:
         jsr note
         ldy tmp_y
         jmp @dur
-@rest:  ldx cur_v
+@rest:  sty tmp_y
+        jsr vbusy
+        bcs :+
+        ldx cur_v
         ldy voff,x
         lda vwave,x
         sta SID + 4,y               ; gate los
-        ldy tmp_y
+:       ldy tmp_y
 @dur:   jsr getb                    ; duur in ticks
         ldx cur_v
         sta vdur,x
@@ -198,6 +323,8 @@ note:
         sta ins_b + 1
         lda #$35
         sta $01
+        jsr vbusy
+        bcs @skip
         ldx cur_v
         ldy voff,x
         lda vwave,x
@@ -209,10 +336,12 @@ note:
         lda vwave,x
         ora #$01
         sta SID + 4,y
-        rts
+@skip:  rts
 
 ; instrument A (0-7) op stem cur_v: ADSR, pulsbreedte, golfvorm
 instrument:
+        ldx cur_v
+        sta vinstr,x
         sta ins_b
         asl a
         asl a
@@ -230,6 +359,11 @@ instrument:
         lda #$35
         sta $01
         ldx cur_v
+        lda ins_b + 2
+        sta vwave,x
+        jsr vbusy
+        bcs @skip
+        ldx cur_v
         ldy voff,x
         lda ins_b
         sta SID + 5,y
@@ -239,6 +373,4 @@ instrument:
         sta SID + 2,y
         lda ins_b + 4
         sta SID + 3,y
-        lda ins_b + 2
-        sta vwave,x
-        rts
+@skip:  rts

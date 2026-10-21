@@ -9,6 +9,7 @@
 #include "text.h"
 #include "builtin.h"
 #include "vm.h"
+#include "sound.h"
 
 #define MAGIC_SCRIPT   0x54        /* 'T' */
 #define BUILTIN_TARGET 0xFF00      /* menu-doel $FFxx = builtin xx */
@@ -53,7 +54,9 @@ static void load_script(unsigned char sid)
 {
     if (sid == cur_script) return;
     if (!disk_load(script_files[lang][sid], LOADBUF) || LOADBUF[0] != MAGIC_SCRIPT) fail(1);
+    sound_hold(1);
     inflatemem(SCRIPTBUF, LOADBUF + 4);
+    sound_hold(0);
     cur_script = sid;
 }
 
