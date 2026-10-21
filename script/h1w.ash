@@ -4,6 +4,9 @@
 
 ; ---------------------------------------------------------------- de Rode Kloof (kamp Ur-Kesh)
 :kloof
+  IF KAMP HIER = BEZET
+    JUMP kamp_bezet
+  END
   SCENE kloof
   CHAR saira
   IF NOT saira_ontmoet
@@ -54,6 +57,9 @@
   JUMP kloof
 
 :grot
+  IF KAMP HIER = BEZET
+    JUMP kamp_bezet
+  END
   SCENE grot
   CHAR tarik
   IF NOT tarik_ontmoet
@@ -104,6 +110,9 @@
 
 ; ---------------------------------------------------------------- generieke locaties
 :kamp
+  IF KAMP HIER = BEZET
+    JUMP kamp_bezet
+  END
   SCENE grot
   CHAR none
   SAY "KAMP {loc}"
@@ -114,6 +123,16 @@
     OPT "Geef een taak"          @TAAK        IF KAMP HIER = BONDGENOOT
     OPT "Status van het kamp"    @STATUS
     OPT "Rust een dag"           @RUST
+    OPT "Kaart"                  @KAART
+  END
+
+:kamp_bezet
+  SCENE grot
+  CHAR none
+  SAY "{loc} - BEZET"
+  TEXT "Soldaten van het Consortium bewaken de ingang. De Kethari van {loc} zijn gevangen of gevlucht. Alleen met krijgers krijg je dit kamp terug."
+  MENU
+    OPT "Bevrijden"              @GEVECHT
     OPT "Kaart"                  @KAART
   END
 

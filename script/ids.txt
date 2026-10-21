@@ -43,6 +43,7 @@ var krijgers
 var groen
 var nacht
 var loc
+var overval_loc
 
 ; --- vlaggen ---
 flag doran_ontmoet
@@ -60,7 +61,10 @@ flag saira_mee
 flag tarik_ontmoet
 flag oogstmachine
 flag h1_klaar
+flag f_overvallen
 
 ; --- engine-nodes: nodes die de engine zelf aanroept (sim.c) ---
 node tiende_waarschuwing
 node gameover_tiende
+node overval
+node gameover_bezet

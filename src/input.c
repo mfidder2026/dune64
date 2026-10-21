@@ -30,7 +30,11 @@ static unsigned char test_poll(void)
     case 'F': return IN_FIRE;
     case 'B': return IN_BACK;
     case 'K': return IN_MAP;
-    case 'A': vars[VAR_AMBER] += 500; return 0;   /* alleen in tests: Tiende-flow los van de balans */
+    /* alleen in tests: */
+    case 'A': vars[VAR_AMBER] += 500; return 0;            /* Tiende-flow los van de balans */
+    case 'T': flag_clr(FLAG_TIENDE_OPEN); return 0;        /* geen Tiende: lange runs */
+    case 'O': flag_set(FLAG_F_OVERVALLEN); return 0;       /* overvallen nu al aan */
+    case 'S': return IN_DISK;                              /* F7 */
     }
     return 0;             /* 'W' en de rest: wachten */
 }

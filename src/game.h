@@ -38,10 +38,23 @@ typedef struct {
     noderef_t     target;    /* target.script == NO_SCRIPT: vrij slot */
 } event_t;
 
-extern unsigned int  vars[NVARS];
-extern unsigned char flags[NFLAGS / 8];
-extern loc_t         locs[NLOCS];
-extern event_t       events[NEVENTS];
+/* De complete spelstatus in één blok: opslaan = dit blok 1-op-1 wegschrijven (§11.3).
+   Verander je de indeling (meer vars, locaties ...), verhoog dan SAVE_VERSION. */
+#define SAVE_MAGIC   0xA5
+#define SAVE_VERSION 1
+
+typedef struct {
+    unsigned char magic, version;
+    unsigned int  vars[NVARS];
+    unsigned char flags[NFLAGS / 8];
+    loc_t         locs[NLOCS];
+    event_t       events[NEVENTS];
+} state_t;
+
+extern state_t state;
+#define vars   (state.vars)
+#define locs   (state.locs)
+#define events (state.events)
 
 /* data.c (gegenereerd door scriptc.py) */
 extern const char* const scene_files[];
@@ -50,6 +63,7 @@ extern const char* const script_files[];
 extern const noderef_t enodes[];
 extern const noderef_t loc_nodes[];
 extern const loc_t loc_init[];
+extern const event_t init_events[];       /* afgesloten met target.script == NO_SCRIPT */
 extern const unsigned char* const loc_names[];
 
 #define HERE (&locs[(unsigned char)vars[VAR_LOC]])
@@ -60,5 +74,7 @@ void          flag_set(unsigned char f);
 void          flag_clr(unsigned char f);
 void          game_add_event(unsigned int day, unsigned char script, unsigned int node);
 void          game_draw_status(void);
+unsigned char game_save(void);           /* 1 = gelukt */
+unsigned char game_load(void);           /* 1 = gelukt; status ongewijzigd bij een fout */
 
 #endif

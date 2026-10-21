@@ -1,5 +1,6 @@
-/* sim.c - sim_day(): één speldag (DESIGN.md §4.7). Fase 2: taken (OOGST, STRIJD), de Tiende
-   en tijd-events. Overvallen en vergroening volgen in fase 3/4. */
+/* sim.c - sim_day(): één speldag (DESIGN.md §4.7): taken (OOGST, STRIJD), overvallen van het
+   Consortium, de Tiende en tijd-events. Vergroening volgt in fase 4. */
+#include <stdlib.h>
 #include "game.h"
 #include "sim.h"
 
@@ -33,6 +34,48 @@ void sim_update_totals(void)
     vars[VAR_GROEN] = n ? green / n : 0;
 }
 
+#define RAID_RANGE  6     /* een STRIJD-kamp beschermt kampen binnen 6 cellen (Manhattan) */
+#define RAID_TRUST 20     /* vertrouwensverlies van een overvallen kamp */
+
+static unsigned char protected_by_strijd(const loc_t* c)
+{
+    unsigned char i;
+    const loc_t* l;
+    for (i = 0; i < NLOCS; ++i) {
+        l = &locs[i];
+        if (l == c || l->status != ST_BONDGENOOT || l->job != JOB_STRIJD) continue;
+        if (abs((int)l->x - c->x) + abs((int)l->y - c->y) <= RAID_RANGE) return 1;
+    }
+    return 0;
+}
+
+/* §4.5: per onbeschermd OOGST-kamp per dag 2 % + 1 % per 20 amber/dag. Het kamp wordt BEZET,
+   de taak vervalt en het vertrouwen daalt. Geen bondgenoot meer over = game over, maar pas
+   een dag na de laatste overval, zodat de speler eerst het bericht ziet. */
+static void raids(void)
+{
+    unsigned char i, chance, allies = 0, occupied = 0, raided = 0;
+    loc_t* l;
+    for (i = 0; i < NLOCS; ++i) {
+        l = &locs[i];
+        if (l->type != LT_KAMP) continue;
+        if (l->status == ST_BONDGENOOT && l->job == JOB_OOGST && !protected_by_strijd(l)) {
+            chance = 2 + sim_yield(l) / 20;
+            if ((unsigned char)(rand() % 100) < chance) {
+                l->status = ST_BEZET;
+                l->job = JOB_GEEN;
+                l->trust = (l->trust > RAID_TRUST) ? l->trust - RAID_TRUST : 0;
+                vars[VAR_OVERVAL_LOC] = i;
+                raided = 1;
+                pend(&enodes[ENODE_OVERVAL], 0);
+            }
+        }
+        if (l->status == ST_BONDGENOOT) ++allies;
+        if (l->status == ST_BEZET) ++occupied;
+    }
+    if (!allies && occupied && !raided) pend(&enodes[ENODE_GAMEOVER_BEZET], 1);
+}
+
 void sim_day(void)
 {
     unsigned char i, d;
@@ -56,7 +99,8 @@ void sim_day(void)
             break;
         }
     }
-    /* 2. overvallen, 3. vergroening: fase 3/4 */
+    /* 2. overvallen (vanaf hoofdstuk 2), 3. vergroening: fase 4 */
+    if (flag_get(FLAG_F_OVERVALLEN)) raids();
 
     ++vars[VAR_DAY];
 

@@ -11,14 +11,15 @@ Uitvoer per blok: PRG (laadadres $B000) met container 'T', flags, size (LE16), d
 
 raw-blok (alle pointers relatief t.o.v. het begin van raw):
   0  first_node (2)          node waar het blok begint (eerste node in het bestand)
-  2  n_ondays (1)            tijd-events op topniveau (ON_DAY buiten een node)
-  3  n x [dag (2), script-id (1), node (2)]
+  2  n_ondays (1)            tijd-events op topniveau (ON_DAY buiten een node); alleen ter info:
+  3  n x [dag (2), script-id (1), node (2)]   de engine neemt ze uit init_events[] in src/data.c
   .. code, daarna strings
 
 Strings: screen codes. TEXT wordt door de ENGINE afgebroken en gepagineerd (zodat getallen en
 namen erin kunnen); de compiler controleert alleen de woordlengte. In TEXT/SAY:
   $FE nieuwe regel ('|')   $FD nieuwe pagina ('||')   $FF einde
   $FC var  getal uit een variabele ('{amber}')   $FB naam van de huidige locatie ('{loc}')
+  $FA var  naam van de locatie met index var ('{plaats_overval_loc}')
 
 Afwijkingen/aanvullingen op de tabel in §9.2 (bewust, zie DESIGN.md):
   ONDAY  dag (2), script-id (1), node (2)  - het doel mag in een ander blok liggen
@@ -41,7 +42,7 @@ OP = dict(SCENE=0x01, CHAR=0x02, SAY=0x03, TEXT=0x04, MENU=0x05, JUMP=0x06, IF=0
           ADD=0x0A, CALL=0x0B, WAIT=0x0C, TIENDE=0x0D, ONDAY=0x0E, LOAD=0x0F, MUSIC=0x10, SKIP=0x11,
           TRUST=0x12, END=0xFF)
 BUILTINS = ["KAART", "TIENDE", "WERVEN", "TAAK", "GEVECHT", "HANDEL", "OPSLAAN", "EINDE",
-            "STATUS", "RUST", "GESCHENK", "PRAAT", "GAMEOVER"]
+            "STATUS", "RUST", "GESCHENK", "PRAAT", "GAMEOVER", "LADEN"]
 CAMP_STATUS = datac.LOC_STATUS
 TEXT_W = 25          # kolom 26 blijft vrij voor het ▼-teken
 LINE_W = 26          # SAY
@@ -49,7 +50,7 @@ OPT_W = 24           # "> " + optie
 VAR_W = 5            # breedte van een getal ({var}) bij de controles
 BLOCK_MAX = 4096     # SCRIPTBUF
 LOAD_ADDR = 0xB000
-NL, NP, EOS, ESC_VAR, ESC_LOC = 0xFE, 0xFD, 0xFF, 0xFC, 0xFB
+NL, NP, EOS, ESC_VAR, ESC_LOC, ESC_PLACE = 0xFE, 0xFD, 0xFF, 0xFC, 0xFB, 0xFA
 BUILTIN_TARGET = 0xFF00
 HERE_LOC = 0xFF
 
@@ -91,6 +92,8 @@ class TextEncoder:
             name = m.group(1)
             if name == "loc":
                 out.append(ESC_LOC); width += datac.NAME_MAX
+            elif name.startswith("plaats_") and name[7:] in self.ids["var"]:
+                out += [ESC_PLACE, self.ids["var"][name[7:]]]; width += datac.NAME_MAX
             elif name in self.ids["var"]:
                 out += [ESC_VAR, self.ids["var"][name]]; width += VAR_W
             else:
@@ -484,7 +487,13 @@ def write_outputs(comp, ids):
         for l in locs:
             sid, ptr = comp.node_ref(l["node"])
             f.write(f"    {{ {sid}, 0x{ptr:04X} }},   /* {l['id']} -> {l['node']} */\n")
-        f.write("};\n\n/* startwaarden: type, x, y, status, size, trust, job, skill, equip, richness, green, flags */\n")
+        f.write("};\n\n/* ON_DAY-regels op topniveau van alle blokken: game_init() zet ze klaar */\nconst event_t init_events[] = {\n")
+        for blk in comp.blocks:
+            for day, node, _ in blk.ondays:
+                sid, ptr = comp.node_ref(node)
+                f.write(f"    {{ {day}, {{ {sid}, 0x{ptr:04X} }} }},   /* {node} */\n")
+        f.write("    { 0, { NO_SCRIPT, 0 } }\n};\n")
+        f.write("\n/* startwaarden: type, x, y, status, size, trust, job, skill, equip, richness, green, flags */\n")
         f.write("const loc_t loc_init[] = {\n" + "\n".join(datac.c_loc_init(locs)) + "\n};\n\n")
         f.write("/* namen in screen codes, $FF-afgesloten */\n")
         for i, l in enumerate(locs):

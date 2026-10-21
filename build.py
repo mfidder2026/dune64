@@ -32,26 +32,34 @@ GAME_SRC = ["main.c", "gfx.c", "ui.c", "input.c", "disk.c", "game.c", "text.c", 
 # Headless tests: invoer (U/D/L/R/F/B/K, W = wachten), één toets per TEST_RATE frames,
 # en de momenten (seconden emulatietijd) waarop een screenshot wordt gemaakt.
 TEST_RATE = 80          # > 1 pagina typen (125 tekens / 2 per frame): elke F = volgende pagina
-FORT_START = ("F" "FF" "F"          # titel, intro (2+1)
+FORT_START = ("F" "F" "FF" "F"      # titel, startmenu: nieuw spel, intro (2+1)
               "FF" "DDF" "F" "DF"   # Doran (2), menu -> comms, Vorr (1), menu -> terug
               "DDDF" "FFF")         # menu -> hangar, Mardo (1+2)
 RUST_FORT = "DDDDF" "F"             # raadzaal-menu -> Rust een dag, melding
+TO_OOGST = (FORT_START + "F" "F"    # hangar: opstijgen, kaart: Rode Kloof (1 dag)
+            "F" "F" "FF" "F"        # Saira (1), keuze water, antwoord (2), kloof: grot
+            "F" "DDF" "F"           # Tarik (1), geschenk, melding
+            "F" "F" "F"             # krijgers: zegen (1), werven (1)
+            "F" "F" "FF")           # taak -> oogsten, melding (2)
+RUST_GROT = "DDDDDF" "F"            # grot-menu -> Rust een dag, melding
 TESTS = {
-    # H1 tot en met de Tiende: kaart -> Rode Kloof, Saira (water), Tarik (geschenk, zegen, werven,
-    # OOGST), status, 3x rusten, +500 amber (testtoets A), terug naar het fort, Tiende verschepen.
-    "h1_tiende": (FORT_START + "F" "F"          # hangar: opstijgen, kaart: Rode Kloof (1 dag)
-                  "F" "F" "FF" "F"              # Saira (1), keuze water, antwoord (2), kloof: grot
-                  "F" "DDF" "F"                 # Tarik (1), geschenk, melding
-                  "F" "F" "F"                   # krijgers: zegen (1), werven (1)
-                  "F" "F" "FF"                  # taak -> oogsten, melding (2)
-                  "DDDDF" "FF"                  # status (2)
-                  + "DDDDDF" "F" * 3 +          # 3x rusten
+    # H1 tot en met de Tiende: Rode Kloof, Saira (water), Tarik (geschenk, zegen, werven, OOGST),
+    # status, 3x rusten, +500 amber (testtoets A), terug naar het fort, Tiende verschepen.
+    "h1_tiende": (TO_OOGST + "DDDDF" "FF" + RUST_GROT * 3 +
                   "A" "DDDDDDF" "DDF" "F"       # +500, vertrek, kaart, Fort Varo
                   "DDF" "DDF" "F" "F" "FF" "W", # hangar -> raadzaal -> comms -> verschepen, Vorr, einde H1
                   list(range(20, 241, 20))),
     # Tiende missen: 16x rusten -> waarschuwing (+3 dagen), 3x rusten -> game over -> titel
     "h1_gameover": (FORT_START + "DDF" + RUST_FORT * 16 + "F" + RUST_FORT * 3 + "F" "F" "W",
                     list(range(220, 341, 15))),
+    # opslaan op dag 1, 3 dagen rusten, laden -> weer dag 1 in de hangar; dan K = kaart
+    "save_load": (FORT_START + "DDF" "DDDDDF" "F" "F" + RUST_FORT * 3 +
+                  "DDDDDF" "DF" "F" "W" "K" "W",
+                  [62, 66, 130, 136, 142, 150, 160]),
+    # 60 speldagen zonder Tiende (T), met oogsten: geen crash, dag ~63
+    "days60": (TO_OOGST + "T" + RUST_GROT * 60 + "W", [240, 400, 560, 700]),
+    # overvallen aan (O): rusten tot Ur-Kesh overvallen wordt -> bericht -> dag erna game over
+    "raid": (TO_OOGST + "TO" + RUST_GROT * 40 + "W", [160, 240, 320, 400, 480]),
 }
 
 
@@ -160,8 +168,12 @@ def test():
             png = tdir / f"{name}_{sec:03d}s.png"
             if png.exists():
                 png.unlink()
+            # eigen kopie per run: opslaan schrijft op de diskette, en Windows kan het vorige
+            # image nog even vasthouden terwijl VICE afsluit (dan mislukt de autostart)
+            run_d64 = tdir / name / f"run_{sec:03d}.d64"
+            shutil.copyfile(d64, run_d64)
             cmd = [x64, "-default", "-warp", "-sounddev", "dummy", "+drive8truedrive", "-virtualdev8",
-                   "-autostart", d64, "-limitcycles", str(985248 * sec), "-exitscreenshot", png]
+                   "-autostart", run_d64, "-limitcycles", str(985248 * sec), "-exitscreenshot", png]
             print(">", " ".join(str(c) for c in cmd))
             # VICE stopt met exitcode 1 als de cycluslimiet bereikt is: dat is hier de bedoeling
             subprocess.run([str(c) for c in cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

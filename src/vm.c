@@ -46,18 +46,14 @@ static unsigned int rd16(void)
 
 /* ------------------------------------------------------------------ blokken en sprongen */
 
+/* De ON_DAY-tabel in de blokkop wordt niet gebruikt: game_init() zet alle tijd-events
+   klaar uit init_events[], zodat een afgevuurd event niet terugkomt als het blok opnieuw laadt. */
 static void load_script(unsigned char sid)
 {
-    unsigned char i, n;
-    unsigned char* p;
     if (sid == cur_script) return;
     if (!disk_load(script_files[sid], LOADBUF) || LOADBUF[0] != MAGIC_SCRIPT) fail(1);
     inflatemem(SCRIPTBUF, LOADBUF + 4);
     cur_script = sid;
-    n = SCRIPTBUF[2];
-    p = SCRIPTBUF + 3;
-    for (i = 0; i < n; ++i, p += 5)
-        game_add_event(p[0] | ((unsigned int)p[1] << 8), p[2], p[3] | ((unsigned int)p[4] << 8));
 }
 
 static void jump(unsigned int node)
@@ -190,8 +186,16 @@ static void op_menu(void)
         if (ok && k < MAX_OPTS) { items[k] = SCRIPTBUF + str; targets[k] = target; ++k; }
     }
     if (!k) fail(5);
+    ui_menu_keys = 1;
     i = ui_menu(items, k);
+    ui_menu_keys = 0;
     txt_clear();
+    if (i == MENU_KEY_DISK || i == MENU_KEY_MAP) {      /* F7: schijfmenu, K: kaart */
+        if (i == MENU_KEY_MAP && !flag_get(FLAG_GLIDER)) { jump(cur_node); return; }
+        builtin(i == MENU_KEY_DISK ? BI_OPSLAAN : BI_KAART);
+        if (!redirect()) jump(cur_node);
+        return;
+    }
     target = targets[i];
     if (target >= BUILTIN_TARGET) {
         builtin((unsigned char)target);

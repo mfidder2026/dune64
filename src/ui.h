@@ -33,6 +33,11 @@ unsigned char ui_menu(const unsigned char* const* items, unsigned char n);  /* k
 unsigned char ui_menu_str(const char* const* items, unsigned char n);      /* idem met C-strings (max 6) */
 void ui_number(unsigned char line, unsigned char col, unsigned int v, unsigned char color);  /* links uitgelijnd */
 
+/* Met ui_menu_keys = 1 geeft ui_menu ook deze waarden terug (alleen de VM-menu's) */
+#define MENU_KEY_DISK 0xFE   /* F7 */
+#define MENU_KEY_MAP  0xFD   /* K  */
+extern unsigned char ui_menu_keys;
+
 /* Wordt elk frame van ui_menu aangeroepen met de huidige keuze (kaart: knipperende marker). */
 extern void (*ui_menu_hook)(unsigned char sel);
 #endif

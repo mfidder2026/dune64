@@ -7,29 +7,36 @@ const char* const script_files[] = { "h1.scr", "h1w.scr" };
 
 /* engine-nodes (ids.txt 'node') en aankomst-nodes per locatie: script-id, offset */
 const noderef_t enodes[] = {
-    { 0, 0x0103 },   /* tiende_waarschuwing */
-    { 0, 0x010E },   /* gameover_tiende */
+    { 0, 0x0119 },   /* tiende_waarschuwing */
+    { 0, 0x013C },   /* gameover_tiende */
+    { 0, 0x0124 },   /* overval */
+    { 0, 0x012F },   /* gameover_bezet */
 };
 const noderef_t loc_nodes[] = {
-    { 0, 0x011B },   /* fort -> hangar */
+    { 0, 0x0149 },   /* fort -> hangar */
     { 1, 0x0003 },   /* urkesh -> kloof */
-    { 1, 0x00F6 },   /* sheb -> kamp */
-    { 1, 0x00F6 },   /* kaim -> kamp */
-    { 1, 0x00F6 },   /* telmoran -> kamp */
-    { 1, 0x00F6 },   /* khesset -> kamp */
-    { 1, 0x00F6 },   /* iruun -> kamp */
-    { 1, 0x00F6 },   /* varrak -> kamp */
-    { 1, 0x00F6 },   /* daresh -> kamp */
-    { 1, 0x00F6 },   /* shaal -> kamp */
-    { 1, 0x00F6 },   /* khimar -> kamp */
-    { 1, 0x00F6 },   /* irtessa -> kamp */
-    { 1, 0x00F6 },   /* oenvaro -> kamp */
-    { 1, 0x012A },   /* mijnnoord -> voorpost */
-    { 1, 0x012A },   /* mijnoost -> voorpost */
-    { 1, 0x012A },   /* zoutmijn -> voorpost */
-    { 1, 0x012A },   /* diepemijn -> voorpost */
-    { 1, 0x0140 },   /* citadel -> citadel */
-    { 1, 0x0151 },   /* mer -> mer */
+    { 1, 0x0108 },   /* sheb -> kamp */
+    { 1, 0x0108 },   /* kaim -> kamp */
+    { 1, 0x0108 },   /* telmoran -> kamp */
+    { 1, 0x0108 },   /* khesset -> kamp */
+    { 1, 0x0108 },   /* iruun -> kamp */
+    { 1, 0x0108 },   /* varrak -> kamp */
+    { 1, 0x0108 },   /* daresh -> kamp */
+    { 1, 0x0108 },   /* shaal -> kamp */
+    { 1, 0x0108 },   /* khimar -> kamp */
+    { 1, 0x0108 },   /* irtessa -> kamp */
+    { 1, 0x0108 },   /* oenvaro -> kamp */
+    { 1, 0x015B },   /* mijnnoord -> voorpost */
+    { 1, 0x015B },   /* mijnoost -> voorpost */
+    { 1, 0x015B },   /* zoutmijn -> voorpost */
+    { 1, 0x015B },   /* diepemijn -> voorpost */
+    { 1, 0x0171 },   /* citadel -> citadel */
+    { 1, 0x0182 },   /* mer -> mer */
+};
+
+/* ON_DAY-regels op topniveau van alle blokken: game_init() zet ze klaar */
+const event_t init_events[] = {
+    { 0, { NO_SCRIPT, 0 } }
 };
 
 /* startwaarden: type, x, y, status, size, trust, job, skill, equip, richness, green, flags */
@@ -41,10 +48,10 @@ const loc_t loc_init[] = {
     { 1,  4, 13, 0,  15,  35, 0, 0, 0,  70, 0, 0x00 },   /* telmoran */
     { 1, 14, 12, 0,  50,  20, 0, 0, 0, 200, 0, 0x04 },   /* khesset */
     { 1, 33, 13, 0,  35,  30, 0, 0, 0, 140, 0, 0x00 },   /* iruun */
-    { 1, 27,  7, 0,  20,  40, 0, 0, 0,  60, 0, 0x00 },   /* varrak */
+    { 1, 28,  6, 0,  20,  40, 0, 0, 0,  60, 0, 0x00 },   /* varrak */
     { 1, 11,  9, 0,  60,  15, 0, 0, 0, 220, 0, 0x04 },   /* daresh */
     { 1, 37,  6, 0,  45,  20, 0, 0, 0, 110, 0, 0x00 },   /* shaal */
-    { 1, 17, 15, 0,  25,  35, 0, 0, 0,  90, 0, 0x00 },   /* khimar */
+    { 1, 19, 15, 0,  25,  35, 0, 0, 0,  90, 0, 0x00 },   /* khimar */
     { 1,  2,  2, 0,  90,  10, 0, 0, 0, 180, 0, 0x00 },   /* irtessa */
     { 1, 36, 15, 0,  30,  25, 0, 0, 0, 130, 0, 0x00 },   /* oenvaro */
     { 2, 13,  3, 1,  30,   0, 0, 0, 0,   0, 0, 0x00 },   /* mijnnoord */

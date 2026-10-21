@@ -6,6 +6,7 @@
 /* escapes in script-strings (scriptc.py) */
 #define SC_VAR  0xFC     /* gevolgd door var-id: getal */
 #define SC_LOC  0xFB     /* naam van de huidige locatie */
+#define SC_PLACE 0xFA    /* gevolgd door var-id: naam van de locatie met die index */
 
 extern unsigned char txt_mouth;    /* 1 = personage in beeld: mond animeren tijdens het typen */
 

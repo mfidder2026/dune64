@@ -52,6 +52,7 @@ void txt_sc(const unsigned char* sc)
     while ((c = *sc++) != SC_END) {
         if (c == SC_VAR)      txt_num(vars[*sc++]);
         else if (c == SC_LOC) txt_name((unsigned char)vars[VAR_LOC]);
+        else if (c == SC_PLACE) txt_name((unsigned char)vars[*sc++]);
         else                  add(c);
     }
 }

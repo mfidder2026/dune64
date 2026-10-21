@@ -30,7 +30,9 @@ You are **Ilan Varo**, the new governor of **Ashkara**, a desert planet. Under t
   - a map with location markers and a blinking destination;
   - travel that costs days, with Kethari camps discovered along the way;
   - recruiting camps (trust, gifts, Tarik's blessing) and giving them jobs (harvest or train);
-  - a daily simulation and the Tithe deadline, with one warning before game over.
+  - a daily simulation and the Tithe deadline, with one warning before game over;
+  - from chapter 2 on, Consortium raids on harvesting camps, unless a training camp guards them.
+- **Save and load** to disk (`ASHKARA.SAV`), from any menu with F7.
 - **Everything on one 1541 disk:** scenes and portraits are deflate-compressed and unpacked under the Kernal ROM.
 
 ## Status
@@ -40,7 +42,7 @@ You are **Ilan Varo**, the new governor of **Ashkara**, a desert planet. Under t
 | 0 | Screens, file formats, raster split, loader, character patches, screen demo | ✅ |
 | 1 | Engine core: input, menus, text paging, script VM, script compiler | ✅ |
 | 2 | **Chapter 1 playable**: map, travel, discovery, recruiting, harvesting, the first Tithe, game over | ✅ |
-| 3 | Consortium raids, save/load | ⏳ |
+| 3 | Consortium raids, save/load | ✅ |
 | 4 | Chapters 2–5, battles, terraforming, two endings | ⏳ |
 | 5 | SID music, fastloader, real-hardware testing | ⏳ |
 
@@ -54,9 +56,9 @@ x64sc -autostart ashkara.d64
 
 On a real C64 or a C64 Ultimate, mount the D64 and `LOAD"*",8,1` / `RUN`. A fastload cartridge (or JiffyDOS) is recommended until the fastloader lands in phase 5.
 
-**Controls:** joystick in port 2 or the cursor keys to choose, and fire, Return or Space to confirm or turn the page. On the map, left/right pages through the destinations.
+**Controls:** joystick in port 2 or the cursor keys to choose, and fire, Return or Space to confirm or turn the page. On the map, left/right pages through the destinations. **K** opens the map, and **F7** opens the save/load menu. You can also load a saved game from the start menu after the title screen.
 
-**Tip:** one camp alone can't harvest 500 amber in time. Explore and recruit a second camp.
+**Tips:** one camp alone can't harvest 500 amber in time, so explore and recruit a second camp. After the first Tithe, the Consortium starts raiding harvesting camps; a camp that trains (STRIJD) protects every camp within 6 cells.
 
 ## Build
 

@@ -55,6 +55,9 @@ unsigned char gfx_load_scene(const char* name)
     n = rows;
     memcpy(SCREEN, COLBUF, n * 40);
     memcpy(COLRAM, COLBUF + n * 40, n * 40);
+    /* Bitmaprij 17 leeg: valt de split een paar cycli te laat, dan toont de VIC daar nog
+       bitmap (resten van een volledig scherm zoals de titel) in plaats van het paneel. */
+    if (n < 25) memset(BITMAP + n * 320, 0, 320);
     scene_rows = rows;
     return rows;
 }

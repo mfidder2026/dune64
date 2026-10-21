@@ -78,6 +78,10 @@ static void werven(void)
         txt_message("WERVEN", "Ze staan al aan jouw kant.");
         return;
     }
+    if (l->status == ST_BEZET) {
+        txt_message("WERVEN", "Het Consortium houdt dit kamp bezet.");
+        return;
+    }
     if (!flag_get(FLAG_F_TARIK_ZEGEN)) {
         txt_message("WERVEN", "Zonder de zegen van Tarik Ur-Kesh volgt geen Kethari een landvoogd.");
         return;
@@ -172,6 +176,39 @@ static void rust(void)
     txt_show();
 }
 
+static void laden(void)
+{
+    txt_title("LADEN");
+    if (!game_load()) {
+        txt_message("LADEN", "Geen opgeslagen spel gevonden (of van een oudere versie).");
+        return;
+    }
+    sim_pending.script = NO_SCRIPT;
+    sim_update_totals();
+    game_draw_status();
+    txt_begin();
+    txt_str("Spel geladen: dag "); txt_num(vars[VAR_DAY]); txt_str(", ");
+    txt_name((unsigned char)vars[VAR_LOC]); txt_str(".");
+    txt_show();
+    vm_next = loc_nodes[(unsigned char)vars[VAR_LOC]];
+}
+
+static const char* const disk_items[] = { "Spel opslaan", "Spel laden", "Terug" };
+
+static void opslaan(void)
+{
+    unsigned char k;
+    txt_title("OPSLAAN / LADEN");
+    k = ui_menu_str(disk_items, 3);
+    if (k == 1) { laden(); return; }
+    if (k != 0) return;
+    txt_title("OPSLAAN");
+    txt_clear();
+    ui_text(1, "Bezig met opslaan...", COL_WHITE);
+    if (game_save()) txt_message("OPSLAAN", "Opgeslagen als ASHKARA.SAV.");
+    else             txt_message("OPSLAAN", "Opslaan mislukt. Is de diskette beveiligd of vol?");
+}
+
 static void gameover(void)
 {
     vm_char(0);
@@ -191,6 +228,8 @@ void builtin(unsigned char id)
     case BI_PRAAT:    praat(); break;
     case BI_RUST:     rust(); break;
     case BI_GAMEOVER: gameover(); break;
+    case BI_OPSLAAN:  opslaan(); break;
+    case BI_LADEN:    laden(); break;
     case BI_GEVECHT:  txt_message("AANVAL", "Met wachters en messen win je geen vesting. Later, landvoogd."); break;
     default:          txt_message("NOG NIET GEBOUWD", "Deze functie volgt later."); break;
     }

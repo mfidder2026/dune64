@@ -126,6 +126,7 @@ void ui_wait_fire(void)
 static const unsigned char sc_end = SC_END;
 
 void (*ui_menu_hook)(unsigned char sel);
+unsigned char ui_menu_keys;
 
 /* Menu in regels 1..5 met cursor '>'; meer dan 5 opties schuiven mee, met een pijl rechtsonder.
    Links/rechts bladert per 5. */
@@ -158,6 +159,8 @@ unsigned char ui_menu(const unsigned char* const* items, unsigned char n)
         if (ev & IN_LEFT) { sel = (sel > 5) ? sel - 5 : 0; redraw = 1; }
         if (ev & IN_RIGHT) { sel = (sel + 5 < n) ? sel + 5 : n - 1; redraw = 1; }
         if (ev & IN_FIRE) return sel;
+        if (ui_menu_keys && (ev & IN_DISK)) return MENU_KEY_DISK;
+        if (ui_menu_keys && (ev & IN_MAP)) return MENU_KEY_MAP;
     }
 }
 

@@ -1,9 +1,16 @@
 ; Hoofdstuk 1 - Aankomst (DESIGN.md §3.1)
-; Intro, Fort Varo, de Rode Kloof (Saira, Tarik), generieke kampen en de eerste Tiende.
+; Startmenu, intro, Fort Varo, de eerste Tiende, en de engine-nodes (Tiende, overval, game over).
 ; Tekst: '|' = nieuwe regel, '||' = nieuwe pagina, {var} = getal, {loc} = huidige locatie.
 
 :intro
   SCENE ruimte
+  SAY "ASHKARA - DE AMBERWOESTIJN"
+  MENU
+    OPT "Nieuw spel"             proloog
+    OPT "Spel laden"             @LADEN
+  END
+
+:proloog
   SAY "ASHKARA, JAAR 812"
   TEXT "De Hoge Raad stuurt Ilan Varo als landvoogd naar de amberwoestijn. Wie het amber beheerst, beheerst de sprongroutes van de Ring van Werelden."
   TEXT "Onder het zand gloeit het amberiet. Boven het zand wacht het Mijnconsortium van gouverneur Kasimir Vorr."
@@ -25,6 +32,7 @@
     OPT "Communicatiekamer"      comms
     OPT "Hangar"                 hangar       IF vorr_eis
     OPT "Rust een dag"           @RUST        IF glider
+    OPT "Opslaan / laden"        @OPSLAAN
   END
 
 :doran_praat
@@ -66,7 +74,7 @@
     TEXT "De Tiende is een strop: {tiende_eis} amber, uiterlijk dag {tiende_dag}. Haal je hem niet, dan krijgt Vorr het fort."
   ELSE
     IF h1_klaar
-      TEXT "De Raad is tevreden, voor nu. Vorr niet. Hij laat zijn schepen vaker vliegen."
+      TEXT "Vorr laat zijn huurlingen los op de kampen die voor ons oogsten. Laat een kamp in de buurt strijd oefenen: dat houdt ze op afstand."
     ELSE
       TEXT "Ga naar de communicatiekamer. Vorr wil je spreken, en hij wacht niet graag."
     END
@@ -104,10 +112,11 @@
   END
   TEXT "Op tijd, landvoogd. De Raad is tevreden. Voorlopig. De volgende Tiende is groter: 900 amber, binnen 15 dagen."
   SET h1_klaar
+  SET f_overvallen
   TIENDE 900 15
   CHAR none
   SAY "HOOFDSTUK 1 VOLTOOID"
-  TEXT "Ilan Varo heeft de eerste Tiende betaald. Maar in de woestijn roert zich iets.||Wordt vervolgd in hoofdstuk 2: Het Zandvolk."
+  TEXT "Ilan Varo heeft de eerste Tiende betaald. Maar in de woestijn roert zich iets: het Consortium begint de kampen te overvallen.||Wordt vervolgd in hoofdstuk 2: Het Zandvolk."
   JUMP comms
 
 :tiende_waarschuwing
@@ -116,6 +125,20 @@
   SAY "GOUVERNEUR VORR"
   TEXT "U bent te laat met de Tiende, landvoogd. De Raad geeft u drie dagen uitstel. Tot dag {tiende_dag}. Niet langer."
   RETURN
+
+:overval
+  SCENE oogst
+  CHAR none
+  SAY "OVERVAL!"
+  TEXT "Huurlingen van het Consortium hebben {plaats_overval_loc} overvallen. De oogstmachine brandt, de Kethari zijn gevlucht of gevangen.||Een kamp dat strijd oefent, beschermt de kampen binnen zes dagmarsen."
+  RETURN
+
+:gameover_bezet
+  SCENE storm
+  CHAR none
+  SAY "HET ZAND ZWIJGT"
+  TEXT "Geen enkel kamp volgt je nog. Zonder de Kethari is Ashkara verloren."
+  CALL @GAMEOVER
 
 :gameover_tiende
   SCENE comms

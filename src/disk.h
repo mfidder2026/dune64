@@ -6,4 +6,8 @@
    laadadres als addr == 0. Geeft het aantal geladen bytes terug, 0 = fout. */
 unsigned int disk_load(const char* name, void* addr);
 
+/* Schrijft size bytes vanaf addr als PRG. Een bestaand bestand wordt eerst gescratcht
+   (geen "@0:"-replace: bekende bug in de 1541-ROM). 1 = gelukt. */
+unsigned char disk_save(const char* name, const void* addr, unsigned int size);
+
 #endif

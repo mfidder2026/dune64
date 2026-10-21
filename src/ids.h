@@ -34,6 +34,7 @@
 #define VAR_GROEN 6
 #define VAR_NACHT 7
 #define VAR_LOC 8
+#define VAR_OVERVAL_LOC 9
 #define FLAG_DORAN_ONTMOET 0
 #define FLAG_VESNA_ONTMOET 1
 #define FLAG_VORR_EIS 2
@@ -49,8 +50,11 @@
 #define FLAG_TARIK_ONTMOET 12
 #define FLAG_OOGSTMACHINE 13
 #define FLAG_H1_KLAAR 14
+#define FLAG_F_OVERVALLEN 15
 #define ENODE_TIENDE_WAARSCHUWING 0
 #define ENODE_GAMEOVER_TIENDE 1
+#define ENODE_OVERVAL 2
+#define ENODE_GAMEOVER_BEZET 3
 #define BI_KAART 0
 #define BI_TIENDE 1
 #define BI_WERVEN 2
@@ -64,6 +68,7 @@
 #define BI_GESCHENK 10
 #define BI_PRAAT 11
 #define BI_GAMEOVER 12
+#define BI_LADEN 13
 #define LOC_FORT 0
 #define LOC_URKESH 1
 #define LOC_SHEB 2
@@ -97,5 +102,5 @@
 #define NCHARS 6
 #define NSCRIPTS 2
 #define NLOCS 19
-#define NENODES 2
+#define NENODES 4
 #endif

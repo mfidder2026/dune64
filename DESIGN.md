@@ -2,7 +2,7 @@
 
 **Platform:** Commodore 64 (PAL), 1541-diskette (D64) · **Taal/toolchain:** C + 6502-assembly met **cc65 2.19**, testen in **VICE 3.7** (`x64sc`) · **Doelgroep van dit document:** de AI-developer die het spel bouwt.
 
-> **Status:** fase 0, 1 en **2 (hoofdstuk 1)** zijn klaar. Alle schermen bestaan als C64-data in `assets/`; `demo/ashkara-demo.d64` is de schermen-demo. Het spel staat in `src/`, `script/` en `data/`: hoofdstuk 1 is van begin tot eind speelbaar (`python build.py play`): Fort Varo, kaart met markers, reizen, ontdekken onderweg, Saira en Tarik, werven, OOGST, rusten, de eerste Tiende betalen, en game over bij een gemiste Tiende. Volgende stap: fase 3 (overvallen, opslaan/laden). Bouw hierop verder; begin niet opnieuw.
+> **Status:** fase 0 t/m **3 (strategielaag)** zijn klaar. Alle schermen bestaan als C64-data in `assets/`; `demo/ashkara-demo.d64` is de schermen-demo. Het spel staat in `src/`, `script/` en `data/`: hoofdstuk 1 is van begin tot eind speelbaar (`python build.py play`): Fort Varo, kaart met markers, reizen, ontdekken onderweg, Saira en Tarik, werven, OOGST, rusten, de eerste Tiende betalen, en game over bij een gemiste Tiende. Fase 3 voegt overvallen van het Consortium toe (vanaf hoofdstuk 2) en opslaan/laden. Volgende stap: fase 4 (hoofdstukken 2–5, gevechten, vergroening, eindes). Bouw hierop verder; begin niet opnieuw.
 
 ---
 
@@ -201,7 +201,7 @@ kans_win = kracht / (kracht + garnizoen)        → rnd(0..255) < kans_win × 25
 ```
 - **Winst:** de voorpost wordt een kamp (BONDGENOOT, vertrouwen 80), gevangenen komen vrij, en de ondervraagde officier geeft een hint (scriptvlag).
 - **Verlies:** de deelnemende kampen verliezen 50 % `size`. Was Ilan mee, dan is het game over.
-- **Overvallen door het Consortium** (`sim_day`): per OOGST-kamp zonder STRIJD-bescherming binnen 6 cellen is de kans per dag `2 % + 1 % per 20 amber/dag`. Dan wordt het kamp BEZET, de mensen zijn weg en de status gaat terug naar BEZET tot je het bevrijdt.
+- **Overvallen door het Consortium** (`sim_day`): per OOGST-kamp zonder STRIJD-bescherming binnen 6 cellen is de kans per dag `2 % + 1 % per 20 amber/dag`. Dan wordt het kamp BEZET, vervalt de taak en daalt het vertrouwen met 20, tot je het bevrijdt (fase 4: `@GEVECHT`). **Fase 3:** overvallen beginnen pas na de eerste Tiende (vlag `f_overvallen`, gezet aan het einde van H1). Het overvallen kamp staat in `overval_loc`; de engine-node `overval` meldt het (`{plaats_overval_loc}`). Is er daarna geen enkele bondgenoot meer en minstens één kamp bezet, dan volgt **een dag later** `gameover_bezet`, zodat de speler eerst het bericht ziet. Bezette kampen tonen de node `kamp_bezet` (ook de Rode Kloof). Khimar en Varrak zijn verschoven, zodat Ur-Kesh en Kaim een buurkamp binnen 6 cellen hebben.
 - Garnizoenen: voorposten 120/180/220/300, Citadel 600.
 
 ### 4.6 Vergroening (tweede manier om te winnen)
@@ -460,6 +460,8 @@ ON_DAY 34 verraad          ; tijd-event: springt naar node 'verraad' (in h3.ash)
 
 **Fase 2-uitbreidingen:** opcode `$12 TRUST delta` (vertrouwen van het kamp op de huidige locatie); condities `$09 var waarde16` (=), `$0A cond` (NIET, bron `NOT <cond>`), `$0B n` (bron `VERTROUWEN >= n`), en bij `$05` locatie `$FF` = hier (bron `KAMP HIER = BONDGENOOT` of `KAMP <locatie-id> = …`). Builtins erbij: `@STATUS`, `@RUST`, `@GESCHENK`, `@PRAAT`, `@GAMEOVER`. `ids.txt` kent ook `node <naam>`: nodes die de engine zelf aanroept (`tiende_waarschuwing`, `gameover_tiende`). Een hoofdstuk mag over meerdere blokken verdeeld zijn: H1 is `h1` (fort) + `h1w` (woestijn).
 
+**Tijd-events (fase 3):** `ON_DAY`-regels op topniveau gaan via `init_events[]` in `src/data.c`; `game_init()` zet ze klaar. De tabel in de blokkop wordt niet meer gebruikt, anders kwam een afgevuurd event terug zodra het blok opnieuw laadde. Escape `$FA var` (bron `{plaats_<var>}`) toont de naam van de locatie met index `var`. Builtin `@LADEN` is erbij.
+
 **Na een builtin** gaat de VM eerst naar een node die de simulatie klaarzette (`sim_pending`: Tiende-waarschuwing, game over, `ON_DAY`), dan naar een node die de builtin vroeg (`vm_next`: aankomst na een reis), anders opnieuw naar de menu-node. Een `END` in een event-node gaat naar de aankomst-node van de huidige locatie.
 
 **Overige bronsyntax:** `IF … ELSE … END`, `RETURN` (expliciete `END`), `CALL @NAAM`, `CHAR none`, `ADD var n`, `WAIT frames`, `TIENDE bedrag dagen`, `ON_DAY dag node` (binnen een node → opcode, op topniveau → bloktabel), `LOAD script node`. `TIENDE` zet ook de vlag `tiende_open`; `@TIENDE` schrijft het amber af en wist die vlag.
@@ -523,8 +525,12 @@ Eén D64-diskette volstaat. Op echte hardware (een 1541, of een C64 Ultimate met
 - **Ontwerpkeuze:** alle disk-I/O gaat via `disk_load()` in `disk.c`. In fase 5 kun je daar een IRQ-loader of fastloader (bijvoorbeeld Krill's loader of Spindle) inpluggen zonder de rest te raken. Tot die tijd werkt alles met JiffyDOS, een fastload-cartridge of de turbo-opties van een Ultimate.
 - In VICE tijdens het ontwikkelen: zet *True drive emulation* uit (`+drive8truedrive -virtualdev8`) voor laden zonder wachttijd.
 
-### 11.3 Opslaan
-`@OPSLAAN` schrijft `ashkara.sav` (PRG, ~600 B) met de vlaggen, variabelen, kampen, locaties, het hoofdstuk en de huidige node. Doe eerst een scratch via het commandokanaal (`cbm_open(15,8,15,"s0:ashkara.sav")`), dan `cbm_save`. Gebruik **geen** `@0:`-replace (bekende bug in de 1541-ROM).
+### 11.3 Opslaan (fase 3, gebouwd)
+De hele spelstatus staat in één blok `state_t state` (`game.h`): magic `$A5`, `SAVE_VERSION`, 32 variabelen, 256 vlaggen, alle locaties en de tijd-events, samen 366 bytes. `vars`, `locs` en `events` zijn macro's op dat blok. `@OPSLAAN` (schijfmenu: opslaan / laden / terug) schrijft het met `disk_save()`: eerst een scratch via het commandokanaal (`cbm_open(15,8,15,"s0:ashkara.sav")`), dan `cbm_save`. Gebruik **geen** `@0:`-replace (bekende bug in de 1541-ROM). `@LADEN` laadt naar `LOADBUF`, controleert magic en versie en neemt het pas dan over; een kapot of oud bestand laat het lopende spel heel.
+
+**Na het laden** gaat het spel verder bij de **aankomst-node van de locatie** waar je opsloeg, niet midden in een node. Zo blijft een savegame bruikbaar als de scripts veranderen. Verander je de indeling van `state_t` (meer variabelen of locaties), verhoog dan `SAVE_VERSION`.
+
+Je bereikt het schijfmenu met **F7** in elk menu, via "Opslaan / laden" in de raadzaal, en "Spel laden" in het startmenu na het titelscherm. **K** opent in elk menu de kaart (zodra je de glider hebt). `ui_menu` geeft die toetsen alleen terug in VM-menu's (`ui_menu_keys`).
 
 ---
 
@@ -574,7 +580,7 @@ xvfb-run -a x64sc -default +sound -autostart test.d64 +drive8truedrive -virtuald
 ```
 Let op: in VICE 3.7 levert `-warp` met `-exitscreenshot` een zwart beeld. **VICE 3.9 (Windows) heeft dat probleem niet**; `build.py test` gebruikt daarom `-warp` (9 screenshots in ~20 s).
 
-**Het spel (fase 1+)** compileert met `-DTESTMODE`: de invoer komt dan uit `build/testkeys.h` (gegenereerd uit `TESTS` in `build.py`): één toets per `TEST_RATE` frames (`F` vuur, `U/D/L/R`, `B` RUN/STOP, `K` kaart, `W` wachten). Omdat de teller alleen loopt terwijl de engine op invoer wacht, is het verloop deterministisch, ongeacht de laadtijd. `python build.py test [naam ...]` maakt per test een reeks screenshots `build/test/<test>_<sec>s.png`. Tests in fase 2: `h1_tiende` (hoofdstuk 1 tot en met de betaalde Tiende; testtoets `A` geeft +500 amber, zodat de test los staat van de balans) en `h1_gameover` (Tiende missen: waarschuwing, uitstel, game over, terug naar de titel). In TESTMODE is de random-seed vast (`srand(1)`). Een rode rand met de dagteller als foutcode betekent een VM-fout (1 = script laden, 2 = conditie, 3 = scène, 4 = patch, 5 = leeg menu, 6 = onbekende opcode).
+**Het spel (fase 1+)** compileert met `-DTESTMODE`: de invoer komt dan uit `build/testkeys.h` (gegenereerd uit `TESTS` in `build.py`): één toets per `TEST_RATE` frames (`F` vuur, `U/D/L/R`, `B` RUN/STOP, `K` kaart, `W` wachten). Omdat de teller alleen loopt terwijl de engine op invoer wacht, is het verloop deterministisch, ongeacht de laadtijd. `python build.py test [naam ...]` maakt per test een reeks screenshots `build/test/<test>_<sec>s.png`. Tests: `h1_tiende` (hoofdstuk 1 tot en met de betaalde Tiende; testtoets `A` geeft +500 amber, zodat de test los staat van de balans) en `h1_gameover` (Tiende missen: waarschuwing, uitstel, game over, terug naar de titel), `save_load` (opslaan op dag 1, drie dagen rusten, laden: weer dag 1 in de hangar, daarna `K` = kaart), `days60` (60 speldagen met een oogstend kamp, zonder Tiende) en `raid` (overvallen aan: overval, bericht, een dag later game over). Testtoetsen die alleen in TESTMODE bestaan: `A` +500 amber, `T` Tiende uit, `O` overvallen aan, `S` = F7. Elke screenshot-run krijgt een eigen kopie van de D64. In TESTMODE is de random-seed vast (`srand(1)`). Een rode rand met de dagteller als foutcode betekent een VM-fout (1 = script laden, 2 = conditie, 3 = scène, 4 = patch, 5 = leeg menu, 6 = onbekende opcode).
 
 ### 12.4 Wat in fase 0 aantoonbaar werkt (VICE 3.7.1, PAL)
 - Titelscherm (25 rijen) geladen, uitgepakt onder de Kernal, beeld correct.
@@ -623,7 +629,7 @@ python pipeline/c64gfx.py patch art/SCENE.png art/SCENE+X.png art/X_m1.png art/X
 | **0 ✔** | Schermen, formaten, split, loader, patches, demo-diskette | `python build.py run` toont alle 16 storyboard-schermen (gedaan). |
 | **1 ✔ Engine-kern** | `input.c`, menu-selectie in `ui.c`, paginering, `vm.c`, `scriptc.py`, `disk.c` | Het voorbeeldscript uit §9.1 is speelbaar: raadzaal → comms → menu-keuzes werken, de tekst pagineert, de mond praat. |
 | **2 ✔ Hoofdstuk 1** | `h1.ash` volledig (§3.1), kaart met markers, reizen, `WOESTIJN`-ontdekking, werven, OOGST, Tiende | H1 is van begin tot eind uit te spelen (eerste Tiende betalen), inclusief game over bij een gemiste Tiende. |
-| **3 Strategielaag** | `game.c`, `sim.c`, `locations.json`/`datac.py`, overvallen, opslaan/laden | 60 speldagen draaien zonder crash. Opslaan en laden geven dezelfde staat (testscript). |
+| **3 ✔ Strategielaag** | `game.c`, `sim.c`, `locations.json`/`datac.py`, overvallen, opslaan/laden | 60 speldagen draaien zonder crash. Opslaan en laden geven dezelfde staat (testscript). |
 | **4 Inhoud H2–H5** | Scripts, extra scènes (handelspost, Citadel-variant, grotvarianten), gevechten, vergroening, twee eindes | Beide eindes zijn bereikbaar. De balans is getest met een gesimuleerde speler (Python-port van `sim_day`). |
 | **5 Afwerking** | SID-muziek (eigen compositie), fastloader in `disk.c`, titel-sprites "DRUK OP VUUR", test op echte hardware | Draait op een echte C64 of een C64 Ultimate. Laden < 3 s per scène met de fastloader. |
 
