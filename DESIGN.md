@@ -2,7 +2,7 @@
 
 **Platform:** Commodore 64 (PAL), 1541-diskette (D64) · **Taal/toolchain:** C + 6502-assembly met **cc65 2.19**, testen in **VICE 3.7** (`x64sc`) · **Doelgroep van dit document:** de AI-developer die het spel bouwt.
 
-> **Status:** fase 0 t/m **4 (alle hoofdstukken, gevechten, vergroening, twee eindes)** zijn klaar. Alle schermen bestaan als C64-data in `assets/`; `demo/ashkara-demo.d64` is de schermen-demo. Het spel staat in `src/`, `script/` en `data/`: hoofdstuk 1 is van begin tot eind speelbaar (`python build.py play`): Fort Varo, kaart met markers, reizen, ontdekken onderweg, Saira en Tarik, werven, OOGST, rusten, de eerste Tiende betalen, en game over bij een gemiste Tiende. Fase 3 voegt overvallen van het Consortium toe (vanaf hoofdstuk 2) en opslaan/laden. Daarna kwamen erbij: de **vluchtanimatie** (§4.9) en **tweetaligheid NL/EN** (§9.4). Fase 4 maakt het spel compleet: H2 (verklikker, water, lichtende velden), H3 *Verraad* op dag 34, H4/H5 met gevechten, de handelaars van Mer, windvangers, en een militair en een groen einde. Volgende stap: fase 5 (muziek, fastloader, echte hardware). Bouw hierop verder; begin niet opnieuw.
+> **Status:** alle fasen (0 t/m **5: muziek, fastloader, voorbereiding op echte hardware**) zijn klaar. Alle schermen bestaan als C64-data in `assets/`; `demo/ashkara-demo.d64` is de schermen-demo. Het spel staat in `src/`, `script/` en `data/`: hoofdstuk 1 is van begin tot eind speelbaar (`python build.py play`): Fort Varo, kaart met markers, reizen, ontdekken onderweg, Saira en Tarik, werven, OOGST, rusten, de eerste Tiende betalen, en game over bij een gemiste Tiende. Fase 3 voegt overvallen van het Consortium toe (vanaf hoofdstuk 2) en opslaan/laden. Daarna kwamen erbij: de **vluchtanimatie** (§4.9) en **tweetaligheid NL/EN** (§9.4). Fase 4 maakt het spel compleet: H2 (verklikker, water, lichtende velden), H3 *Verraad* op dag 34, H4/H5 met gevechten, de handelaars van Mer, windvangers, en een militair en een groen einde. Fase 5 voegt toe: eigen SID-muziek, een eigen fastloader (scènes < 3 s), een gecomprimeerd hoofdprogramma, "DRUK OP VUUR"-sprites op het titelscherm en een diagnose-diskette voor echte hardware. Alles is getest in VICE met **true drive emulation**; een test op een echte C64 staat nog open (§16 D). Bouw hierop verder; begin niet opnieuw.
 
 ---
 
@@ -335,7 +335,7 @@ Het **scherm-RAM** wordt gedeeld: rijen 0–16 bevatten de bitmapkleuren (hoge/l
 - **Lijn 186** zet het tekstdeel aan (`$D011`, `$D018`). Komt de IRQ een paar cycli te laat (bijvoorbeeld door een korte `SEI` in de Kernal), dan toont de eerste pixellijn van paneelrij 17 nog bitmap. Daarom: alle tekens op rij 17 hebben een lege bovenste pixelrij (ook het ornament `ORN_M`), en `gfx_load_scene` maakt bitmaprij 17 leeg, zodat daar geen resten van een volledig scherm staan. Door de overhead van de Kernal-IRQ landt de schrijfactie op het einde van lijn 186, in de rechterrand. Pixelrij 135 van elke scène is zwart, dus een eventueel glitchje is onzichtbaar. Verander de art-regel "onderste 2 pixelrijen zwart" niet.
 - **Lijn 252** (onderrand) zet het bitmapdeel terug, verhoogt `frame_count` en springt naar `$EA31` (toetsenbord en jiffy-klok).
 - `split_enabled = 0` voor schermen van 25 rijen. `screen_on = $00/$10` zet het beeld uit tijdens het laden (DEN).
-- Muziek (fase 5): roep `play` aan vanuit de IRQ op lijn 252.
+- Muziek (fase 5, gebouwd): `music_play` (`src/music.s`) draait vanuit de IRQ op lijn 252, 1x per frame. De muziekdata ligt in de RAM onder de I/O (`$D200`); de player leest die met `$01=$34` en schrijft de SID met `$01=$35`. Tijdens uitpakken (`SEI`) staat de muziek even stil.
 
 ---
 
@@ -345,18 +345,17 @@ Het **scherm-RAM** wordt gedeeld: rijen 0–16 bevatten de bitmapkleuren (hoge/l
 |---|---|---|
 | `$0002–$001B` | 26 B | cc65 zero page |
 | `$00FB–$00FE` | 4 B | vrij voor eigen asm (pointers) |
-| `$0801–$87FF` | ~32 KB | **Programma** (cc65 `MAIN`: code, rodata, data, bss), daarna de C-stack van **1 KB** (`$8800–$8BFF`). Linkerconfig `src/ashkara.cfg` (`__HIMEM__ = $8C00`). Fase 4: het spel eindigt rond `$855A`. |
-| `$8C00–$9AFF` | 3,75 KB | `LOADBUF`: gecomprimeerd bestand van disk (grootste: `kaart.scn` 3575 B) |
-| `$9B00–$A6FF` | 3 KB | `PATBUF`: uitgepakte patchset (grootste: `tarik.pat` 2687 B) |
-| `$A700–$AEFF` | 2 KB | `COLBUF`: uitgepakt scherm- en kleur-RAM (max. 2000 B bij 25 rijen) |
-| `$AF00–$BEFF` | 4 KB | `SCRIPTBUF`: scriptblok van het huidige hoofdstuk (§9) |
+| `$0801–$92FF` | ~34 KB | **Programma** (cc65 `MAIN`: code, rodata, data, bss), daarna de C-stack van **1 KB** (`$9300–$96FF`). Linkerconfig `src/ashkara.cfg` (`__HIMEM__ = $9700`). Fase 5: het spel eindigt rond `$8C93`. Op de diskette staat het **gecomprimeerd** (exomizer sfx: 31 → 16 KB). |
+| `$9700–$A5FF` | 3,75 KB | `LOADBUF`: gecomprimeerd bestand van disk (grootste: `kaart.scn` 3575 B); ook kladruimte van de fastloader |
+| `$A600–$B1FF` | 3 KB | `PATBUF`: uitgepakte patchset (grootste: `tarik.pat` 2687 B). **`COLBUF` deelt deze ruimte**: alleen nodig tijdens het uitpakken van een scène, en een nieuwe scène wist het personage toch |
+| `$B200–$BFFF` | 3,5 KB | `SCRIPTBUF`: scriptblok van het huidige hoofdstuk (§9; de compiler bewaakt 3584 B) |
 
-In fase 4 is de buffer-indeling compacter gemaakt: het spel groeide met gevechten, handel en tweetalige teksten tot ~32 KB. `build.py` (`check_buffers`) weigert assets die niet in hun buffer passen. **Fase 5 (muziek):** ruimte voor een SID-tune moet nog gevonden worden, bijvoorbeeld door de engine-teksten naar een scriptblok te verplaatsen of `$C600–$C7FF` (vrije spriteblokken) te gebruiken.
+In fase 4 en 5 is de buffer-indeling twee keer compacter gemaakt (kleinere stack, `SCRIPTBUF` 3,5 KB, `COLBUF` = `PATBUF`) en zijn muziek en drivecode onder de I/O gezet. `build.py` (`check_buffers`) weigert assets die niet in hun buffer passen. Vrij: ~1,6 KB tussen programma en stack.
 | `$C000–$C3E7` | 1000 B | Scherm-matrix (VIC-bank 3) |
 | `$C3F8–$C3FF` | 8 B | Sprite-pointers |
-| `$C400–$C7FF` | 1 KB | Spritedata, blokken 16–31 (globe 16–23, vrij 24–31: markers/"DRUK OP VUUR") |
+| `$C400–$C7FF` | 1 KB | Spritedata, blokken 16–31 (globe 16–23; 24–27 "DRUK OP VUUR", 28–31 "PRESS FIRE", allebei in `globe.spr`) |
 | `$C800–$CFFF` | 2 KB | UI-charset |
-| `$D000–$DFFF` | — | I/O (CPU); kleur-RAM `$D800` |
+| `$D000–$DFFF` | — | I/O (CPU); kleur-RAM `$D800`. **De RAM eronder (4 KB)**: `extra.bin` bij het opstarten, met op `$D000` de lengte en de fastloader-drivecode (max. 510 B) en op `$D200` de muziekdata. Lezen/schrijven alleen met `$01=$34` (`io_copy`, `music.s`). |
 | `$E000–$FF3F` | 8000 B | Bitmap (onder de Kernal-ROM; schrijven kan altijd, lezen alleen met `$01=$35`) |
 | `$FFFA–$FFFF` | 6 B | RAM-vectoren → RTI-stub (nodig tijdens uitpakken met de Kernal weggebankt) |
 
@@ -553,6 +552,24 @@ src/
 
 Eén D64-diskette volstaat. Op echte hardware (een 1541, of een C64 Ultimate met de D64 gemount) werkt alles via de Kernal.
 
+### 11.2b Fastloader (fase 5, gebouwd)
+Een eigen 2-bit-loader: `src/drive/drive.s` draait op `$0500` in de 1541 (M-W in stukken van 32 bytes, gestart met M-E), `src/fastload.s` is de C64-kant, `disk.c` kiest automatisch.
+- **Protocol:** de C64 is de klok. Elke ATN-wisseling is één paar van 2 bits (DATA = bit 0, CLK = bit 1, laag = 1). Van drive naar C64 gaat ATN binnen een byte altijd aan/uit/aan/uit. De drive wacht dus met een lus van 7 cycli op precies die flank en schrijft een vooraf berekende waarde (tabel per nibble): antwoord binnen 13 cycli. De C64 leest ≥ 20 cycli na de wisseling en verwerkt in die wachttijd het vorige paar. Een badline of IRQ op de C64 maakt de wachttijd alleen langer, dus het werkt met beeld, sprites en raster-IRQ aan, op PAL en NTSC. Commando's (C64 → drive: laden + naam, stoppen, ping) gaan via een langzamere, even robuuste weg.
+- **Bezig/klaar:** de drive houdt CLK laag zolang hij een sector leest (via de jobqueue van DOS, buffer 0) of de directory doorzoekt. Na elk blok bevestigt de C64 met 2 ATN-wisselingen, zodat ATN tussen transacties altijd los is. VIA1-interrupts staan uit zolang de drivecode draait.
+- **Installatie:** bij het opstarten, na `extra.bin`. Antwoordt de drive niet op de ping (SD2IEC, VICE virtual device, 1581), dan blijft alles via de Kernal lopen. Voor opslaan geeft de C64 de drive terug aan DOS (`fl_command(2)`), slaat op via de Kernal en installeert daarna opnieuw.
+- **Interleave 12:** de fastloader heeft ~100 ms per sector nodig (overdracht ~40 ms + job-wachttijd). Bij de standaard interleave 10 komt de volgende sector op de sporen 1–17 na 95 ms langs, net te vroeg: dan kost elke sector een extra omwenteling. `build.py` schrijft de spel-diskette daarom zelf (`pipeline/mkd64.py`) met interleave 12.
+- **Gemeten** (VICE 3.9, true drive emulation, 1541-II, `tests/fltest.c`):
+
+| Bestand | Kernal | Fastloader |
+|---|---|---|
+| `kaart.scn` (3575 B, de grootste) | 6,3 s | **2,7 s** |
+| `titel.scn` (2889 B) | 5,1 s | 2,3 s |
+| `h1.scr` (1832 B) | 3,1 s | 1,4 s |
+| `ui.chr` (2048 B) | 3,8 s | 1,3 s |
+
+- **Beperkingen:** het protocol gebruikt ATN, dus alleen drive 8 mag aan staan op de seriële bus (een printer of tweede drive reageert op ATN). Het hoofdprogramma zelf laadt nog via de Kernal (~16 KB gecomprimeerd); met JiffyDOS, een Action Replay of een Ultimate gaat dat sneller. Een eigen bootloader die ook het hoofdprogramma snel laadt, is een mogelijke vervolgstap.
+- **Diagnose:** `python build.py fltest` maakt `build/fltest.d64`. Die laadt een paar bestanden via de Kernal en via de fastloader en toont lengte, checksum en laadtijd. Draai dat als eerste op echte hardware.
+
 ### 11.2 Laadsnelheid
 - Met de standaard-Kernal en een echte 1541 haal je ongeveer 300–400 B/s. Een scène van 2 KB kost dan **5–7 s**, plus ~1 s uitpakken. Speelbaar, maar traag.
 - **Ontwerpkeuze:** alle disk-I/O gaat via `disk_load()` in `disk.c`. In fase 5 kun je daar een IRQ-loader of fastloader (bijvoorbeeld Krill's loader of Spindle) inpluggen zonder de rest te raken. Tot die tijd werkt alles met JiffyDOS, een fastload-cartridge of de turbo-opties van een Ultimate.
@@ -593,6 +610,8 @@ python build.py demo                # alleen de demo compileren + D64
 python build.py game                # scripts + spel compileren -> build/ashkara.d64
 python build.py play                # idem + spel starten in VICE
 python build.py test                # headless VICE-tests -> build/test/*.png
+python build.py fltest              # fastloader-diagnose -> build/fltest.d64 (ook voor echte hardware)
+python build.py tde                 # spel met/zonder fastloader onder true drive emulation
 ```
 `build.py` vindt `cl65`, `c1541` en `x64sc` automatisch onder `tools/`, `../tools` en `../c64`, ook als die op Windows `.exe` heten. Overschrijven kan met `CL65=…`, `C1541=…` en `X64SC=…`. Zonder `c1541` gebruikt het script `pipeline/mkd64.py`. Getest met cc65 2.19 en VICE 3.7.1.
 
@@ -664,7 +683,7 @@ python pipeline/c64gfx.py patch art/SCENE.png art/SCENE+X.png art/X_m1.png art/X
 | **2 ✔ Hoofdstuk 1** | `h1.ash` volledig (§3.1), kaart met markers, reizen, `WOESTIJN`-ontdekking, werven, OOGST, Tiende | H1 is van begin tot eind uit te spelen (eerste Tiende betalen), inclusief game over bij een gemiste Tiende. |
 | **3 ✔ Strategielaag** | `game.c`, `sim.c`, `locations.json`/`datac.py`, overvallen, opslaan/laden | 60 speldagen draaien zonder crash. Opslaan en laden geven dezelfde staat (testscript). |
 | **4 ✔ Inhoud H2–H5** | Scripts, extra scènes (handelspost, Citadel-variant, grotvarianten), gevechten, vergroening, twee eindes | Beide eindes zijn bereikbaar. De balans is getest met een gesimuleerde speler (Python-port van `sim_day`). |
-| **5 Afwerking** | SID-muziek (eigen compositie), fastloader in `disk.c`, titel-sprites "DRUK OP VUUR", test op echte hardware | Draait op een echte C64 of een C64 Ultimate. Laden < 3 s per scène met de fastloader. |
+| **5 ✔ Afwerking** | SID-muziek (eigen compositie), fastloader in `disk.c`, titel-sprites "DRUK OP VUUR", test op echte hardware | Draait op een echte C64 of een C64 Ultimate. Laden < 3 s per scène met de fastloader. |
 
 ---
 
@@ -685,6 +704,14 @@ python pipeline/c64gfx.py patch art/SCENE.png art/SCENE+X.png art/X_m1.png art/X
 
 ### A. Scènelijst (assets)
 `titel` (25) · `ruimte` · `raadzaal` · `balkon` · `comms` · `hangar` · `kaart` · `woestijn` · `kloof` · `grot` · `oogst` · `nacht` · `storm` · `vesting` · `oase` · `einde` (25). Previews staan in `preview/`, bronkunst in `art/`.
+
+### D. Checklist echte hardware (fase 5)
+Getest in VICE 3.9: PAL en NTSC, virtual device (Kernal) en true drive emulation (1541-II, fastloader), opslaan/laden met fastloader. Nog te doen op echt ijzer:
+1. **`fltest.d64`** op een echte 1541 / 1541-II / Ultimate: 5 van 5 "ok", fastloader-tijden ≈ de tabel in §11.2b.
+2. **Spel-D64** op dezelfde drive: titel met muziek, kaart, een vlucht, opslaan en laden.
+3. Alleen drive 8 op de bus (geen printer, geen tweede drive aan).
+4. NTSC-machine: werkt in VICE; de muziek speelt daar 20 % sneller (60 Hz).
+5. SD2IEC of andere niet-1541-apparaten: de fastloader wordt overgeslagen (ping); laden gaat dan via de Kernal of de eigen snellaadfunctie van het apparaat.
 
 ### B. Personage-patches (cellen)
 | Patch | Lichaam (x, y, b, h) | Mond (x, y, b, h) |

@@ -213,17 +213,26 @@ static void laden(void)
     vm_next = loc_nodes[(unsigned char)vars[VAR_LOC]];
 }
 
-static const char* const disk_items[NLANGS][4] = {
-    { "Spel opslaan", "Spel laden", "Language: English", "Terug" },
-    { "Save game", "Load game", "Taal: Nederlands", "Back" } };
+static const char* const disk_items[NLANGS][5] = {
+    { "Spel opslaan", "Spel laden", "Language: English", "Muziek aan/uit", "Terug" },
+    { "Save game", "Load game", "Taal: Nederlands", "Music on/off", "Back" } };
+
+void music_init(void);                 /* music.s */
+void music_silence(void);
+extern unsigned char music_on;
 
 static void opslaan(void)
 {
     unsigned char k;
     txt_title(L("OPSLAAN / LADEN", "SAVE / LOAD"));
-    k = ui_menu_str(disk_items[lang], 4);
+    k = ui_menu_str(disk_items[lang], 5);
     if (k == 1) { laden(); return; }
     if (k == 2) { vm_set_lang(!lang); return; }
+    if (k == 3) {
+        music_on ^= 1;
+        if (music_on) music_init(); else music_silence();
+        return;
+    }
     if (k != 0) return;
     txt_title(L("OPSLAAN", "SAVE"));
     txt_clear();

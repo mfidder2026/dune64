@@ -202,6 +202,25 @@ def sprite_bytes(img):
     return bytes(out) + b"\x00"
 
 
+# --- "DRUK OP VUUR" / "PRESS FIRE" als hires-sprites (blokken 24-27 en 28-31, titelscherm) ---
+FIRE_TEXTS = ("DRUK OP VUUR", "PRESS FIRE")
+FIRE_SPRITES = 4                     # 4 sprites x 3 tekens = 12 tekens per tekst
+
+
+def text_sprites(text, font):
+    """Tekst (max 12 tekens) gecentreerd in 4 hires-sprites van 24x21; letters op rij 6-13."""
+    text = text.center(FIRE_SPRITES * 3)
+    out = b""
+    for s in range(FIRE_SPRITES):
+        rows = [[0, 0, 0] for _ in range(21)]
+        for c in range(3):
+            g = font[ord(text[s * 3 + c])]
+            for y in range(8):
+                rows[6 + y][c] = g[y]
+        out += bytes(b for r in rows for b in r) + b"\x00"
+    return out
+
+
 def render_sprite(img):
     pal = [None, SPR_D025, SPR_COL, SPR_D026]  # %01=$D025 %10=sprite kleur %11=$D026
     out = np.full((21, 24), 255, np.uint8)
@@ -236,7 +255,9 @@ def export():
     data = bytes(b for g in cs for b in g)
     with open(f"{ROOT}/assets/ui.chr", "wb") as f:
         f.write(struct.pack("<H", 0xC800) + data)
-    spr = b"".join(sprite_bytes(fr) for fr in globe_frames())
+    spr = b"".join(sprite_bytes(fr) for fr in globe_frames())          # blokken 16-23
+    font = load_font8x8()
+    spr += b"".join(text_sprites(t, font) for t in FIRE_TEXTS)          # blokken 24-31
     with open(f"{ROOT}/assets/globe.spr", "wb") as f:
         f.write(struct.pack("<H", 0xC400) + spr)
     # charset-sheet als preview

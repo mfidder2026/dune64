@@ -7,6 +7,7 @@
 ; CIA1-timer-IRQ staat uit; het toetsenbord wordt 1x per frame gescand via $EA31.
 
         .export _irq_install, _frame_count, _split_enabled, _screen_on, _nmi_stub
+        .import music_play
 
 SPLIT_LINE  = 186
 BOTTOM_LINE = 252
@@ -71,6 +72,7 @@ irq:
         lda #$08            ; scherm $C000, bitmap $E000
         sta $d018
         inc _frame_count
+        jsr music_play      ; SID-player (music.s), 1x per frame
         lda #SPLIT_LINE
         sta $d012
         lda #0

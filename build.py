@@ -27,7 +27,7 @@ EXE = ".exe" if os.name == "nt" else ""
 SCENES = ["titel", "ruimte", "raadzaal", "balkon", "comms", "hangar", "kaart", "woestijn", "kloof",
           "grot", "oogst", "nacht", "storm", "vesting", "oase", "einde", "vlucht"]
 CHARS = ["doran", "vesna", "vorr", "mardo", "saira", "tarik"]
-GAME_SRC = ["main.c", "gfx.c", "ui.c", "input.c", "disk.c", "game.c", "text.c", "vm.c", "builtin.c", "sim.c", "map.c", "flight.c", "battle.c", "data.c", "irq.s"]
+GAME_SRC = ["main.c", "gfx.c", "ui.c", "input.c", "disk.c", "game.c", "text.c", "vm.c", "builtin.c", "sim.c", "map.c", "flight.c", "battle.c", "data.c", "irq.s", "music.s", "fastload.s"]
 
 # Headless tests: invoer (U/D/L/R/F/B/K, W = wachten), één toets per TEST_RATE frames,
 # en de momenten (seconden emulatietijd) waarop een screenshot wordt gemaakt.
@@ -115,11 +115,20 @@ def assets():
         run([py, PIPE / script], cwd=PIPE)
 
 
-def make_d64(d64, title, files):
+# Interleave van de bestanden op de spel-diskette: de fastloader heeft ~100 ms per sector nodig;
+# bij 12 komt de volgende sector op de binnenste sporen (21 sectoren) na ~114 ms langs.
+FILE_INTERLEAVE = 12
+
+
+def make_d64(d64, title, files, interleave=None):
     c1541 = find_tool("c1541", "C1541")
     if d64.exists():
         d64.unlink()
-    if c1541:
+    if interleave:
+        sys.path.insert(0, str(PIPE))
+        import mkd64
+        mkd64.make(str(d64), title.upper(), [str(f) for f in files], interleave=interleave)
+    elif c1541:
         cmd = [c1541, "-format", title, "d64", d64]
         for f in files:
             cmd += ["-write", f, f.name]
@@ -144,7 +153,7 @@ def demo():
 
 
 # Buffers in het C64-geheugen (src/gfx.h, DESIGN.md §7): de grootste assets moeten erin passen.
-LOADBUF_SIZE, PATBUF_SIZE, SCRIPTBUF_SIZE = 0x9B00 - 0x8C00, 0xA700 - 0x9B00, 0xBF00 - 0xAF00
+LOADBUF_SIZE, PATBUF_SIZE, SCRIPTBUF_SIZE = 0xA600 - 0x9700, 0xB200 - 0xA600, 0xC000 - 0xB200
 
 
 def check_buffers(files):
@@ -159,25 +168,80 @@ def check_buffers(files):
             sys.exit(f"{f.name}: uitgepakt te groot voor SCRIPTBUF ({SCRIPTBUF_SIZE})")
 
 
+def extra():
+    """build/extra.bin (PRG, $D000): lengte + drivecode (max 510 B) op $D000, muziek op $D200."""
+    cl65 = need("cl65", "CL65")
+    BUILD.mkdir(exist_ok=True)
+    run([cl65, "-t", "none", "-C", SRC / "drive" / "drive.cfg", "-o", BUILD / "drive.bin", SRC / "drive" / "drive.s"])
+    run([sys.executable, PIPE / "music.py"])
+    drv = (BUILD / "drive.bin").read_bytes()
+    music = (BUILD / "music.bin").read_bytes()
+    data = bytes([len(drv) & 0xFF, len(drv) >> 8]) + drv
+    data += bytes(0x200 - len(data)) + music
+    out = BUILD / "extra.bin"
+    out.write_bytes(bytes([0x00, 0xD0]) + data)
+    print(f"extra.bin: drivecode {len(drv)} B, muziek {len(music)} B")
+    return out
+
+
 def game(defines=(), out=None):
     cl65 = need("cl65", "CL65")
     BUILD.mkdir(exist_ok=True)
     run([sys.executable, PIPE / "scriptc.py"])
+    xtra = extra()
     out = out or BUILD / "ashkara"
     out.parent.mkdir(parents=True, exist_ok=True)
     flags = []
     for d in defines:
         flags += ["-D", d]
+    raw = out.with_name("ashkara.raw")
     run([cl65, "-t", "c64", "-O", "-I", SRC, "-I", BUILD, *flags, "-C", SRC / "ashkara.cfg",
-         "-m", out.with_suffix(".map"), "-o", out] + [SRC / f for f in GAME_SRC])
+         "-m", out.with_suffix(".map"), "-o", raw] + [SRC / f for f in GAME_SRC])
+    exo = find_tool("exomizer", "EXOMIZER")
+    if exo:      # zelfuitpakkend en half zo groot: laadt op een echte 1541 twee keer zo snel
+        run([exo, "sfx", "sys", "-q", "-o", out, raw])
+    else:
+        shutil.copyfile(raw, out)
+    print(f"ashkara: {raw.stat().st_size} B -> {out.stat().st_size} B op de diskette")
     prg = out
     scr = [ROOT / "assets" / f"{s}{suffix}.scr" for s in scripts() for suffix in ("", "e")]
     check_buffers(asset_files() + scr)
-    return make_d64(out.with_suffix(".d64"), "ashkara,a1", [prg] + asset_files() + scr)
+    if len(xtra.read_bytes()) - 2 > LOADBUF_SIZE: sys.exit("extra.bin past niet in LOADBUF")
+    return make_d64(out.with_suffix(".d64"), "ashkara,a1", [prg] + asset_files() + scr + [xtra], FILE_INTERLEAVE)
 
 
 def vice(d64):
     run([need("x64sc", "X64SC"), "-autostart", d64])
+
+
+def fltest():
+    """build/fltest.d64: fastloader-diagnose (tests/fltest.c), ook voor echte hardware."""
+    cl65 = need("cl65", "CL65")
+    run([sys.executable, PIPE / "scriptc.py"])
+    xtra = extra()
+    prg = BUILD / "fltest"
+    run([cl65, "-t", "c64", "-O", "-I", SRC, "-o", prg, ROOT / "tests" / "fltest.c", SRC / "disk.c", SRC / "fastload.s"])
+    a = ROOT / "assets"
+    files = [prg, xtra, a / "ui.chr", a / "titel.scn", a / "h1.scr", a / "kaart.scn"]
+    return make_d64(BUILD / "fltest.d64", "fltest,a1", files, FILE_INTERLEAVE)
+
+
+def tde_compare(shots=(45, 55, 65, 75, 85, 95, 110, 125, 140)):
+    """Fastloader vs Kernal onder true drive emulation: zelfde testinvoer, screenshots per seconde."""
+    x64 = need("x64sc", "X64SC")
+    tdir = BUILD / "tde"
+    tdir.mkdir(parents=True, exist_ok=True)
+    (BUILD / "testkeys.h").write_text(f'#define TEST_RATE {TEST_RATE}\nstatic const char test_keys[] = "{TESTS["english"][0]}";\n')
+    for variant, defs in (("fast", ["TESTMODE"]), ("kernal", ["TESTMODE", "NOFAST"])):
+        d64 = game(defs, tdir / variant / "ashkara")
+        for sec in shots:
+            run_d64 = tdir / variant / f"run_{sec:03d}.d64"
+            shutil.copyfile(d64, run_d64)
+            png = tdir / f"{variant}_{sec:03d}s.png"
+            cmd = [x64, "-default", "-warp", "-sounddev", "dummy", "-drive8truedrive", "+virtualdev8",
+                   "-autostart", run_d64, "-limitcycles", str(985248 * sec), "-exitscreenshot", png]
+            subprocess.run([str(c) for c in cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print("screenshot:", png if png.exists() else "MISLUKT")
 
 
 def test():
@@ -220,5 +284,9 @@ if __name__ == "__main__":
         d = game()
         if what == "play":
             vice(d)
+    if what == "fltest":
+        fltest()
+    if what == "tde":
+        tde_compare()
     if what == "test":
         test()
