@@ -25,14 +25,14 @@ BUILD = ROOT / "build"
 EXE = ".exe" if os.name == "nt" else ""
 
 SCENES = ["titel", "ruimte", "raadzaal", "balkon", "comms", "hangar", "kaart", "woestijn", "kloof",
-          "grot", "oogst", "nacht", "storm", "vesting", "oase", "einde"]
+          "grot", "oogst", "nacht", "storm", "vesting", "oase", "einde", "vlucht"]
 CHARS = ["doran", "vesna", "vorr", "mardo", "saira", "tarik"]
-GAME_SRC = ["main.c", "gfx.c", "ui.c", "input.c", "disk.c", "game.c", "text.c", "vm.c", "builtin.c", "sim.c", "map.c", "data.c", "irq.s"]
+GAME_SRC = ["main.c", "gfx.c", "ui.c", "input.c", "disk.c", "game.c", "text.c", "vm.c", "builtin.c", "sim.c", "map.c", "flight.c", "data.c", "irq.s"]
 
 # Headless tests: invoer (U/D/L/R/F/B/K, W = wachten), één toets per TEST_RATE frames,
 # en de momenten (seconden emulatietijd) waarop een screenshot wordt gemaakt.
 TEST_RATE = 80          # > 1 pagina typen (125 tekens / 2 per frame): elke F = volgende pagina
-FORT_START = ("F" "F" "FF" "F"      # titel, startmenu: nieuw spel, intro (2+1)
+FORT_START = ("F" "F" "F" "FF" "F"  # titel, taal: Nederlands, startmenu: nieuw spel, intro (2+1)
               "FF" "DDF" "F" "DF"   # Doran (2), menu -> comms, Vorr (1), menu -> terug
               "DDDF" "FFF")         # menu -> hangar, Mardo (1+2)
 RUST_FORT = "DDDDF" "F"             # raadzaal-menu -> Rust een dag, melding
@@ -48,7 +48,7 @@ TESTS = {
     "h1_tiende": (TO_OOGST + "DDDDF" "FF" + RUST_GROT * 3 +
                   "A" "DDDDDDF" "DDF" "F"       # +500, vertrek, kaart, Fort Varo
                   "DDF" "DDF" "F" "F" "FF" "W", # hangar -> raadzaal -> comms -> verschepen, Vorr, einde H1
-                  list(range(20, 241, 20))),
+                  list(range(30, 271, 30))),
     # Tiende missen: 16x rusten -> waarschuwing (+3 dagen), 3x rusten -> game over -> titel
     "h1_gameover": (FORT_START + "DDF" + RUST_FORT * 16 + "F" + RUST_FORT * 3 + "F" "F" "W",
                     list(range(220, 341, 15))),
@@ -56,6 +56,9 @@ TESTS = {
     "save_load": (FORT_START + "DDF" "DDDDDF" "F" "F" + RUST_FORT * 3 +
                   "DDDDDF" "DF" "F" "W" "K" "W",
                   [62, 66, 130, 136, 142, 150, 160]),
+    # Engels: taalmenu -> English, intro en raadzaal in het Engels, F7 -> taal terug naar Nederlands
+    "english": ("F" "DF" "F" "FF" "F" "FF" "W" "S" "DDF" "W" "W",
+                [10, 14, 22, 30, 38, 46, 52]),
     # 60 speldagen zonder Tiende (T), met oogsten: geen crash, dag ~63
     "days60": (TO_OOGST + "T" + RUST_GROT * 60 + "W", [240, 400, 560, 700]),
     # overvallen aan (O): rusten tot Ur-Kesh overvallen wordt -> bericht -> dag erna game over
@@ -100,7 +103,7 @@ def run(cmd, cwd=None):
 
 def assets():
     py = sys.executable
-    for script in ("scenes.py", "characters.py", "ui.py", "mockups.py", "gen_demo.py"):
+    for script in ("scenes.py", "characters.py", "ui.py", "mockups.py", "gen_demo.py", "flight.py"):
         run([py, PIPE / script], cwd=PIPE)
 
 
@@ -144,7 +147,7 @@ def game(defines=(), out=None):
     run([cl65, "-t", "c64", "-O", "-I", SRC, "-I", BUILD, *flags, "-C", SRC / "ashkara.cfg",
          "-m", out.with_suffix(".map"), "-o", out] + [SRC / f for f in GAME_SRC])
     prg = out
-    scr = [ROOT / "assets" / f"{s}.scr" for s in scripts()]
+    scr = [ROOT / "assets" / f"{s}{suffix}.scr" for s in scripts() for suffix in ("", "e")]
     return make_d64(out.with_suffix(".d64"), "ashkara,a1", [prg] + asset_files() + scr)
 
 

@@ -8,6 +8,7 @@
 #define SAVE_NAME "ashkara.sav"
 
 state_t state;
+unsigned char lang;
 
 static const unsigned char bit[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
 

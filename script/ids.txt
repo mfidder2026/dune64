@@ -20,6 +20,7 @@ scene storm
 scene vesting
 scene oase
 scene einde
+scene vlucht
 
 ; --- personages (bestand: assets/<naam>.pat) ---
 char doran

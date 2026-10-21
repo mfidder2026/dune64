@@ -1,8 +1,8 @@
 {
-  "_doc": "Locaties op de kaart (DESIGN.md §4.2/§4.3). x 0..39, y 0..16 (kaartcel). node = script-node bij aankomst. Kampvelden: size, trust, richness; flags: LICHTEND (lichtend veld), HARVESTER. Voorposten/Citadel: size = garnizoen / 4. Volgorde = locatie-id: nieuwe locaties onderaan (savegames).",
+  "_doc": "Locaties op de kaart (name_en = Engelse naam, standaard gelijk aan name) (DESIGN.md §4.2/§4.3). x 0..39, y 0..16 (kaartcel). node = script-node bij aankomst. Kampvelden: size, trust, richness; flags: LICHTEND (lichtend veld), HARVESTER. Voorposten/Citadel: size = garnizoen / 4. Volgorde = locatie-id: nieuwe locaties onderaan (savegames).",
   "locations": [
     {"id": "fort",      "name": "Fort Varo",      "type": "FORT",     "x": 20, "y": 9,  "status": "BEKEND",   "node": "hangar"},
-    {"id": "urkesh",    "name": "Rode Kloof",     "type": "KAMP",     "x": 24, "y": 14, "status": "BEKEND",   "node": "kloof",  "size": 40, "trust": 30, "richness": 120},
+    {"id": "urkesh",    "name": "Rode Kloof", "name_en": "Red Gorge",     "type": "KAMP",     "x": 24, "y": 14, "status": "BEKEND",   "node": "kloof",  "size": 40, "trust": 30, "richness": 120},
     {"id": "sheb",      "name": "Sheb-Anar",      "type": "KAMP",     "x": 8,  "y": 6,  "status": "ONBEKEND", "node": "kamp",   "size": 25, "trust": 25, "richness": 160, "flags": ["LICHTEND"]},
     {"id": "kaim",      "name": "Kaim",           "type": "KAMP",     "x": 31, "y": 4,  "status": "ONBEKEND", "node": "kamp",   "size": 30, "trust": 25, "richness": 90},
     {"id": "telmoran",  "name": "Tel-Moran",      "type": "KAMP",     "x": 4,  "y": 13, "status": "ONBEKEND", "node": "kamp",   "size": 15, "trust": 35, "richness": 70},
@@ -14,11 +14,11 @@
     {"id": "khimar",    "name": "Khimar",         "type": "KAMP",     "x": 19, "y": 15, "status": "ONBEKEND", "node": "kamp",   "size": 25, "trust": 35, "richness": 90},
     {"id": "irtessa",   "name": "Ir-Tessa",       "type": "KAMP",     "x": 2,  "y": 2,  "status": "ONBEKEND", "node": "kamp",   "size": 90, "trust": 10, "richness": 180},
     {"id": "oenvaro",   "name": "Oen-Varo",       "type": "KAMP",     "x": 36, "y": 15, "status": "ONBEKEND", "node": "kamp",   "size": 30, "trust": 25, "richness": 130},
-    {"id": "mijnnoord", "name": "Mijn Noord",     "type": "VOORPOST", "x": 13, "y": 3,  "status": "BEKEND",   "node": "voorpost", "size": 30},
-    {"id": "mijnoost",  "name": "Mijn Oost",      "type": "VOORPOST", "x": 35, "y": 10, "status": "BEKEND",   "node": "voorpost", "size": 45},
-    {"id": "zoutmijn",  "name": "Zoutmijn",       "type": "VOORPOST", "x": 9,  "y": 15, "status": "BEKEND",   "node": "voorpost", "size": 55},
-    {"id": "diepemijn", "name": "Diepe Mijn",     "type": "VOORPOST", "x": 28, "y": 2,  "status": "BEKEND",   "node": "voorpost", "size": 75},
-    {"id": "citadel",   "name": "De Citadel",     "type": "CITADEL",  "x": 21, "y": 1,  "status": "BEKEND",   "node": "citadel",  "size": 150},
-    {"id": "mer",       "name": "Zoutvlakte Mer", "type": "HANDEL",   "x": 5,  "y": 4,  "status": "BEKEND",   "node": "mer"}
+    {"id": "mijnnoord", "name": "Mijn Noord", "name_en": "North Mine",     "type": "VOORPOST", "x": 13, "y": 3,  "status": "BEKEND",   "node": "voorpost", "size": 30},
+    {"id": "mijnoost",  "name": "Mijn Oost", "name_en": "East Mine",      "type": "VOORPOST", "x": 35, "y": 10, "status": "BEKEND",   "node": "voorpost", "size": 45},
+    {"id": "zoutmijn",  "name": "Zoutmijn", "name_en": "Salt Mine",       "type": "VOORPOST", "x": 9,  "y": 15, "status": "BEKEND",   "node": "voorpost", "size": 55},
+    {"id": "diepemijn", "name": "Diepe Mijn", "name_en": "Deep Mine",     "type": "VOORPOST", "x": 28, "y": 2,  "status": "BEKEND",   "node": "voorpost", "size": 75},
+    {"id": "citadel",   "name": "De Citadel", "name_en": "The Citadel",     "type": "CITADEL",  "x": 21, "y": 1,  "status": "BEKEND",   "node": "citadel",  "size": 150},
+    {"id": "mer",       "name": "Zoutvlakte Mer", "name_en": "Mer Salt Flat", "type": "HANDEL",   "x": 5,  "y": 4,  "status": "BEKEND",   "node": "mer"}
   ]
 }

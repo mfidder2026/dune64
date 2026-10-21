@@ -2,7 +2,7 @@
 
 **Platform:** Commodore 64 (PAL), 1541-diskette (D64) · **Taal/toolchain:** C + 6502-assembly met **cc65 2.19**, testen in **VICE 3.7** (`x64sc`) · **Doelgroep van dit document:** de AI-developer die het spel bouwt.
 
-> **Status:** fase 0 t/m **3 (strategielaag)** zijn klaar. Alle schermen bestaan als C64-data in `assets/`; `demo/ashkara-demo.d64` is de schermen-demo. Het spel staat in `src/`, `script/` en `data/`: hoofdstuk 1 is van begin tot eind speelbaar (`python build.py play`): Fort Varo, kaart met markers, reizen, ontdekken onderweg, Saira en Tarik, werven, OOGST, rusten, de eerste Tiende betalen, en game over bij een gemiste Tiende. Fase 3 voegt overvallen van het Consortium toe (vanaf hoofdstuk 2) en opslaan/laden. Volgende stap: fase 4 (hoofdstukken 2–5, gevechten, vergroening, eindes). Bouw hierop verder; begin niet opnieuw.
+> **Status:** fase 0 t/m **3 (strategielaag)** zijn klaar. Alle schermen bestaan als C64-data in `assets/`; `demo/ashkara-demo.d64` is de schermen-demo. Het spel staat in `src/`, `script/` en `data/`: hoofdstuk 1 is van begin tot eind speelbaar (`python build.py play`): Fort Varo, kaart met markers, reizen, ontdekken onderweg, Saira en Tarik, werven, OOGST, rusten, de eerste Tiende betalen, en game over bij een gemiste Tiende. Fase 3 voegt overvallen van het Consortium toe (vanaf hoofdstuk 2) en opslaan/laden. Daarna kwamen erbij: de **vluchtanimatie** (§4.9) en **tweetaligheid NL/EN** (§9.4). Volgende stap: fase 4 (hoofdstukken 2–5, gevechten, vergroening, eindes). Bouw hierop verder; begin niet opnieuw.
 
 ---
 
@@ -217,6 +217,9 @@ kans_win = kracht / (kracht + garnizoen)        → rnd(0..255) < kans_win × 25
 5. Tijd-events uit het script afvuren (`ON_DAY n` → node, §9).
 6. `day++`; nacht/dag wisselen; het paneel bijwerken.
 
+### 4.9 Vluchtanimatie (`flight.c`, `pipeline/flight.py`)
+In Cryo's *Dune* is het vliegen met de ornithopter een kenmerkend onderdeel: je kijkt uit de cockpit en de woestijn raast onder je door (de cd-versie verving dat door vooraf gerenderde 3D). ASHKARA doet dat op de C64 met **kleurcycli**: de scène `vlucht.scn` (17 rijen) toont een cockpitraam (zwarte stijlen en een dashboard met wijzers), lucht met tafelbergen en grond die tot aan de horizon in **duinbanden** in perspectief is verdeeld. Elke grondpixel heeft slot `1 + (band mod 3)`. De engine geeft per tekenrij drie kleuren (scherm-RAM hoog/laag, kleur-RAM) en draait die elke 4 frames één plaats door, waardoor de banden naar je toe schuiven. Per stap is dat 10 rijen × 80 bytes `memset`, het bitmap blijft ongemoeid. De golven in de banden (sinus over wereld-x) maken er duinen van; vlak bij de horizon is de rij één kleur (nevel) om moiré te verbergen. Paletten per rij voor dag en nacht staan in `src/flight_tab.h` (gegenereerd). Een reis toont 75 frames per reisdag in de tweede helft van de reis met het nachtpalet; vuur slaat de rest van de animatie over. Bij een ontdekking onderweg vlieg je eerst de helft van de reis, dan verschijnt `WOESTIJN`.
+
 ### 4.8 Startwaarden en balans (eerste versie; tunen in fase 4)
 
 | Variabele | Start |
@@ -308,7 +311,7 @@ Het **scherm-RAM** wordt gedeeld: rijen 0–16 bevatten de bitmapkleuren (hoge/l
 
 **Raster-IRQ** (`demo/src/irq.s`, getest):
 - De CIA1-timer-IRQ staat uit; de VIC raster-IRQ staat aan via de vector `$0314` (Kernal-ROM blijft aan).
-- **Lijn 186** zet het tekstdeel aan (`$D011`, `$D018`). Door de overhead van de Kernal-IRQ landt de schrijfactie op het einde van lijn 186, in de rechterrand. Pixelrij 135 van elke scène is zwart, dus een eventueel glitchje is onzichtbaar. Verander de art-regel "onderste 2 pixelrijen zwart" niet.
+- **Lijn 186** zet het tekstdeel aan (`$D011`, `$D018`). Komt de IRQ een paar cycli te laat (bijvoorbeeld door een korte `SEI` in de Kernal), dan toont de eerste pixellijn van paneelrij 17 nog bitmap. Daarom: alle tekens op rij 17 hebben een lege bovenste pixelrij (ook het ornament `ORN_M`), en `gfx_load_scene` maakt bitmaprij 17 leeg, zodat daar geen resten van een volledig scherm staan. Door de overhead van de Kernal-IRQ landt de schrijfactie op het einde van lijn 186, in de rechterrand. Pixelrij 135 van elke scène is zwart, dus een eventueel glitchje is onzichtbaar. Verander de art-regel "onderste 2 pixelrijen zwart" niet.
 - **Lijn 252** (onderrand) zet het bitmapdeel terug, verhoogt `frame_count` en springt naar `$EA31` (toetsenbord en jiffy-klok).
 - `split_enabled = 0` voor schermen van 25 rijen. `screen_on = $00/$10` zet het beeld uit tijdens het laden (DEN).
 - Muziek (fase 5): roep `play` aan vanuit de IRQ op lijn 252.
@@ -466,6 +469,12 @@ ON_DAY 34 verraad          ; tijd-event: springt naar node 'verraad' (in h3.ash)
 
 **Overige bronsyntax:** `IF … ELSE … END`, `RETURN` (expliciete `END`), `CALL @NAAM`, `CHAR none`, `ADD var n`, `WAIT frames`, `TIENDE bedrag dagen`, `ON_DAY dag node` (binnen een node → opcode, op topniveau → bloktabel), `LOAD script node`. `TIENDE` zet ook de vlag `tiende_open`; `@TIENDE` schrijft het amber af en wist die vlag.
 
+### 9.4 Twee talen (Nederlands / Engels)
+- **Scripts:** één bron per blok, met het Engels erbij: `SAY "nl" "en"`, `OPT "nl" "en" doel`, en onder een `TEXT` een regel `EN "en"`. De compiler maakt per blok twee bestanden met **identieke code** (en dus identieke node-offsets) en alleen andere strings: `h1.scr` / `h1e.scr`. Ontbreekt het Engels, dan staat er Nederlands; de compiler telt die strings (alleen tekst met kleine letters, namen tellen niet). Beide varianten moeten binnen 4 KB passen.
+- **Engine:** `lang` (`LANG_NL`/`LANG_EN`, geen spelstatus, niet in de savegame); `L("nl", "en")` kiest een C-string; tabellen met menu-opties zijn `[NLANGS][n]`. `script_files[NLANGS][NSCRIPTS]` en `loc_names[NLANGS][NLOCS]` (veld `name_en` in `locations.json`). "DAG"/"DAY" in het paneel.
+- **Kiezen:** na het titelscherm een taalmenu (`main.c`); in het spel via F7 → "Language: English" / "Taal: Nederlands". `vm_set_lang()` laadt het huidige blok opnieuw in de andere taal en voert de menu-node opnieuw uit; dat kan omdat de offsets gelijk zijn.
+- Het titelbeeld zelf ("DE AMBERWOESTIJN") is nog alleen Nederlands.
+
 ### 9.3 Compiler: `pipeline/scriptc.py` (fase 1, gebouwd)
 - Invoer: `script/<naam>.ash` voor elk `script` in `script/ids.txt` (scène-, personage-, script-, vlag- en variabelenamen → id's, op volgorde; nieuwe namen altijd onderaan hun soort, want id's komen in savegames).
 - Uitvoer: `assets/h1.scr` … (PRG, laadadres `$B000`, container zoals `.pat`: `'T'`, flags, size, deflate) en `src/ids.h` (defines `SCENE_*`, `CHAR_*`, `VAR_*`, `FLAG_*`, `BI_*` en de bestandsnaamtabellen).
@@ -490,6 +499,7 @@ src/
   disk.c/.h     één laadfunctie disk_load(naam, adres); later fastloader hier inpluggen  (fase 1)
   sim.c/.h      sim_day(): taken, Tiende-deadline, events; overvallen/vergroening volgen  (fase 2)
   map.c/.h      kaartscherm: markers, knipperende bestemming, reisdagen, ontdekken (WOESTIJN)  (fase 2)
+  flight.c/.h   vluchtanimatie met kleurcycli (§4.9); flight_tab.h gegenereerd door pipeline/flight.py
   ids.h, data.c gegenereerd door scriptc.py · ui_codes.h: gegenereerd door gen_demo.py
   ashkara.cfg   linkerconfig (kopie van demo/dune64.cfg)
 ```
@@ -580,7 +590,7 @@ xvfb-run -a x64sc -default +sound -autostart test.d64 +drive8truedrive -virtuald
 ```
 Let op: in VICE 3.7 levert `-warp` met `-exitscreenshot` een zwart beeld. **VICE 3.9 (Windows) heeft dat probleem niet**; `build.py test` gebruikt daarom `-warp` (9 screenshots in ~20 s).
 
-**Het spel (fase 1+)** compileert met `-DTESTMODE`: de invoer komt dan uit `build/testkeys.h` (gegenereerd uit `TESTS` in `build.py`): één toets per `TEST_RATE` frames (`F` vuur, `U/D/L/R`, `B` RUN/STOP, `K` kaart, `W` wachten). Omdat de teller alleen loopt terwijl de engine op invoer wacht, is het verloop deterministisch, ongeacht de laadtijd. `python build.py test [naam ...]` maakt per test een reeks screenshots `build/test/<test>_<sec>s.png`. Tests: `h1_tiende` (hoofdstuk 1 tot en met de betaalde Tiende; testtoets `A` geeft +500 amber, zodat de test los staat van de balans) en `h1_gameover` (Tiende missen: waarschuwing, uitstel, game over, terug naar de titel), `save_load` (opslaan op dag 1, drie dagen rusten, laden: weer dag 1 in de hangar, daarna `K` = kaart), `days60` (60 speldagen met een oogstend kamp, zonder Tiende) en `raid` (overvallen aan: overval, bericht, een dag later game over). Testtoetsen die alleen in TESTMODE bestaan: `A` +500 amber, `T` Tiende uit, `O` overvallen aan, `S` = F7. Elke screenshot-run krijgt een eigen kopie van de D64. In TESTMODE is de random-seed vast (`srand(1)`). Een rode rand met de dagteller als foutcode betekent een VM-fout (1 = script laden, 2 = conditie, 3 = scène, 4 = patch, 5 = leeg menu, 6 = onbekende opcode).
+**Het spel (fase 1+)** compileert met `-DTESTMODE`: de invoer komt dan uit `build/testkeys.h` (gegenereerd uit `TESTS` in `build.py`): één toets per `TEST_RATE` frames (`F` vuur, `U/D/L/R`, `B` RUN/STOP, `K` kaart, `W` wachten). Omdat de teller alleen loopt terwijl de engine op invoer wacht, is het verloop deterministisch, ongeacht de laadtijd. `python build.py test [naam ...]` maakt per test een reeks screenshots `build/test/<test>_<sec>s.png`. Tests: `h1_tiende` (hoofdstuk 1 tot en met de betaalde Tiende; testtoets `A` geeft +500 amber, zodat de test los staat van de balans) en `h1_gameover` (Tiende missen: waarschuwing, uitstel, game over, terug naar de titel), `english` (taalmenu → English, Engelse intro en raadzaal, F7 → terug naar Nederlands), `save_load` (opslaan op dag 1, drie dagen rusten, laden: weer dag 1 in de hangar, daarna `K` = kaart), `days60` (60 speldagen met een oogstend kamp, zonder Tiende) en `raid` (overvallen aan: overval, bericht, een dag later game over). Testtoetsen die alleen in TESTMODE bestaan: `A` +500 amber, `T` Tiende uit, `O` overvallen aan, `S` = F7. Elke screenshot-run krijgt een eigen kopie van de D64. In TESTMODE is de random-seed vast (`srand(1)`). Een rode rand met de dagteller als foutcode betekent een VM-fout (1 = script laden, 2 = conditie, 3 = scène, 4 = patch, 5 = leeg menu, 6 = onbekende opcode).
 
 ### 12.4 Wat in fase 0 aantoonbaar werkt (VICE 3.7.1, PAL)
 - Titelscherm (25 rijen) geladen, uitgepakt onder de Kernal, beeld correct.

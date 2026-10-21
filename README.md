@@ -11,11 +11,15 @@ An adventure/strategy game for the **Commodore 64**, inspired by the structure o
   <img src="docs/screenshots/tarik.png" width="48%" alt="Tarik Ur-Kesh in the cave camp">
 </p>
 <p align="center">
+  <img src="docs/screenshots/flight.png" width="48%" alt="Flying over the desert in the glider">
+  <img src="docs/screenshots/english.png" width="48%" alt="The council hall in English">
+</p>
+<p align="center">
   <img src="docs/screenshots/saira.png" width="48%" alt="Saira at the Red Gorge">
   <img src="docs/screenshots/chapter-end.png" width="48%" alt="End of chapter 1">
 </p>
 
-> The in-game text is in Dutch. The world, characters and art are original. Only the *game structure* of Cryo's Dune serves as a reference.
+> The game is fully playable in **English or Dutch**: choose after the title screen, or switch at any time with F7. The world, characters and art are original. Only the *game structure* of Cryo's Dune serves as a reference.
 
 ## The story
 
@@ -24,6 +28,8 @@ You are **Ilan Varo**, the new governor of **Ashkara**, a desert planet. Under t
 ## Features
 
 - **Split-screen display:** a multicolor bitmap scene (160×136) above a multicolor text panel, switched by a raster interrupt, with a rotating globe sprite.
+- **Flying over the desert:** like the ornithopter flights in the original, every journey shows a cockpit view with dunes rushing toward you. It runs at full frame rate on the C64 thanks to color cycling, without redrawing the bitmap. Night falls during long flights.
+- **English and Dutch:** every script line exists in both languages, and both languages compile to identical bytecode with only different strings. That lets you switch language mid-game.
 - **Talking characters:** large portraits patched over the scene, with lip-synced mouth animation and typewriter text.
 - **Story script VM:** dialogue, menus and the story flow live in script files (`script/*.ash`). A Python compiler turns them into compressed bytecode, and a small VM runs it on the C64.
 - **Strategy layer:**
@@ -48,7 +54,7 @@ You are **Ilan Varo**, the new governor of **Ashkara**, a desert planet. Under t
 
 ## Play
 
-Download `ashkara.d64` from the [latest release](https://github.com/mfidder2026/dune64/releases/latest) and start it in VICE:
+Download the game's `.d64` from the [latest release](https://github.com/mfidder2026/dune64/releases/latest) and start it in VICE:
 
 ```bash
 x64sc -autostart ashkara.d64
@@ -56,7 +62,7 @@ x64sc -autostart ashkara.d64
 
 On a real C64 or a C64 Ultimate, mount the D64 and `LOAD"*",8,1` / `RUN`. A fastload cartridge (or JiffyDOS) is recommended until the fastloader lands in phase 5.
 
-**Controls:** joystick in port 2 or the cursor keys to choose, and fire, Return or Space to confirm or turn the page. On the map, left/right pages through the destinations. **K** opens the map, and **F7** opens the save/load menu. You can also load a saved game from the start menu after the title screen.
+**Controls:** joystick in port 2 or the cursor keys to choose, and fire, Return or Space to confirm or turn the page. On the map, left/right pages through the destinations. **K** opens the map, and **F7** opens the save/load/language menu. You can also load a saved game from the start menu after the title screen.
 
 **Tips:** one camp alone can't harvest 500 amber in time, so explore and recruit a second camp. After the first Tithe, the Consortium starts raiding harvesting camps; a camp that trains (STRIJD) protects every camp within 6 cells.
 

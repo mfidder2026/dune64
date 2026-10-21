@@ -2,7 +2,8 @@
 """
 scriptc.py - compiler voor de verhaalscripts van ASHKARA (DESIGN.md §9).
 
-  python scriptc.py                 script/*.ash + data/locations.json -> assets/<naam>.scr, src/ids.h, src/data.c
+  python scriptc.py                 script/*.ash + data/locations.json -> assets/<naam>.scr (NL),
+                                    assets/<naam>e.scr (EN), src/ids.h, src/data.c
   python scriptc.py --check         alleen controleren, niets schrijven
 
 Invoer: script/ids.txt (namen -> id's), script/<naam>.ash per scriptblok uit ids.txt en
@@ -14,6 +15,10 @@ raw-blok (alle pointers relatief t.o.v. het begin van raw):
   2  n_ondays (1)            tijd-events op topniveau (ON_DAY buiten een node); alleen ter info:
   3  n x [dag (2), script-id (1), node (2)]   de engine neemt ze uit init_events[] in src/data.c
   .. code, daarna strings
+
+Tweetalig: SAY "nl" "en", OPT "nl" "en" <doel>, TEXT "nl" met op de volgende regel EN "en".
+Per blok komen er twee bestanden met identieke code (dus identieke node-offsets) en alleen
+andere strings; ontbreekt het Engels, dan wordt het Nederlands gebruikt (met een telling).
 
 Strings: screen codes. TEXT wordt door de ENGINE afgebroken en gepagineerd (zodat getallen en
 namen erin kunnen); de compiler controleert alleen de woordlengte. In TEXT/SAY:
@@ -49,6 +54,8 @@ LINE_W = 26          # SAY
 OPT_W = 24           # "> " + optie
 VAR_W = 5            # breedte van een getal ({var}) bij de controles
 BLOCK_MAX = 4096     # SCRIPTBUF
+LANGS = ("nl", "en")
+LANG_SUFFIX = {"nl": "", "en": "e"}       # h1.scr / h1e.scr
 LOAD_ADDR = 0xB000
 NL, NP, EOS, ESC_VAR, ESC_LOC, ESC_PLACE = 0xFE, 0xFD, 0xFF, 0xFC, 0xFB, 0xFA
 BUILTIN_TARGET = 0xFF00
@@ -168,10 +175,11 @@ class Block:
         self.nodes = {}            # naam -> code-offset
         self.node_order = []
         self.fix_node = []         # (pos, node, where)  -> absolute raw-offset van node (in welk blok dan ook)
-        self.fix_str = []          # (pos, bytes)
+        self.fix_str = []          # [pos, bytes_nl, bytes_en of None]
         self.ondays = []           # (dag, node, where)
         self.edges = []            # (van, naar) voor de scriptgraaf
-        self.raw = None
+        self.raw = {}
+        self.stats = {}
 
 
 class Compiler:
@@ -182,6 +190,7 @@ class Compiler:
         self.enc = TextEncoder(ids)
         self.blocks = []
         self.node_block = {}       # node -> Block
+        self.missing_en = 0
 
     def err(self, where, msg):
         raise ScriptError(f"{where}: {msg}")
@@ -238,8 +247,8 @@ class Compiler:
         blk.fix_node.append((len(blk.code), node, where))
         blk.code += b"\0\0"
 
-    def emit_str(self, blk, data):
-        blk.fix_str.append((len(blk.code), data))
+    def emit_str(self, blk, nl, en=None):
+        blk.fix_str.append([len(blk.code), nl, en])
         blk.code += b"\0\0"
 
     def emit_jump(self, blk, node, cur, where):
@@ -256,6 +265,7 @@ class Compiler:
         cur = None                       # huidige node
         stack = []                       # open IF-blokken: [soort, pos_skip, else_pos, where]
         last_op = None
+        last_str = None                  # laatste SAY/TEXT, voor een EN-regel eronder
         menu = None
         fname = os.path.basename(blk.path)
 
@@ -274,9 +284,10 @@ class Compiler:
                 if head == "END":
                     if not menu: self.err(where, "MENU zonder opties")
                     blk.code += bytes([OP["MENU"], len(menu)])
-                    for text, target, cond, w in menu:
+                    for text, text_en, target, cond, w in menu:
                         blk.code += cond
-                        self.emit_str(blk, self.enc.line(text, OPT_W, w, escapes=False))
+                        self.emit_str(blk, self.enc.line(text, OPT_W, w, escapes=False),
+                                      self.enc.line(text_en, OPT_W, w, escapes=False) if text_en is not None else None)
                         if target.startswith("@"):
                             if target[1:] not in BUILTINS: self.err(w, f"onbekende builtin {target}")
                             blk.code += struct.pack("<H", BUILTIN_TARGET | BUILTINS.index(target[1:]))
@@ -290,12 +301,15 @@ class Compiler:
                     continue
                 if head != "OPT": self.err(where, "binnen MENU alleen OPT of END")
                 text = self.string_tok(toks, 1, where)
-                if len(toks) < 3 or not isinstance(toks[2], str): self.err(where, "OPT \"tekst\" <doel> [IF cond]")
+                text_en = None
+                if len(toks) > 2 and isinstance(toks[2], tuple):
+                    text_en = toks[2][1]; toks = toks[:2] + toks[3:]
+                if len(toks) < 3 or not isinstance(toks[2], str): self.err(where, "OPT \"nl\" [\"en\"] <doel> [IF cond]")
                 cond = b"\0"
                 if len(toks) > 3:
                     if toks[3] != "IF": self.err(where, "na het doel alleen IF <cond>")
                     cond = self.cond(toks[4:], where)
-                menu.append((text, toks[2], cond, where))
+                menu.append((text, text_en, toks[2], cond, where))
                 if len(menu) > 16: self.err(where, "meer dan 16 opties in een MENU")
                 continue
 
@@ -322,10 +336,21 @@ class Compiler:
                 if cid and not os.path.exists(f"{ROOT}/assets/{toks[1]}.pat"): self.err(where, f"assets/{toks[1]}.pat bestaat niet")
                 blk.code += bytes([OP[op], cid])
             elif op == "SAY":
-                blk.code.append(OP[op]); self.emit_str(blk, self.enc.line(self.string_tok(toks, 1, where), LINE_W, where))
+                en = self.enc.line(toks[2][1], LINE_W, where) if len(toks) > 2 and isinstance(toks[2], tuple) else None
+                blk.code.append(OP[op]); self.emit_str(blk, self.enc.line(self.string_tok(toks, 1, where), LINE_W, where), en)
+                last_str = ("SAY", blk.fix_str[-1])
             elif op == "TEXT":
-                text = " ".join(self.string_tok(toks, i, where) for i in range(1, len(toks)))
-                blk.code.append(OP[op]); self.emit_str(blk, self.enc.text(text, where))
+                en = self.enc.text(toks[2][1], where) if len(toks) > 2 and isinstance(toks[2], tuple) else None
+                blk.code.append(OP[op]); self.emit_str(blk, self.enc.text(self.string_tok(toks, 1, where), where), en)
+                last_str = ("TEXT", blk.fix_str[-1])
+            elif op == "EN":
+                if last_str is None or last_str[1][2] is not None:
+                    self.err(where, "EN hoort direct onder een TEXT of SAY zonder Engelse tekst")
+                kind, ent = last_str
+                text = self.string_tok(toks, 1, where)
+                ent[2] = self.enc.text(text, where) if kind == "TEXT" else self.enc.line(text, LINE_W, where)
+                last_str = None
+                continue
             elif op == "MENU":
                 menu = []
                 continue
@@ -383,11 +408,12 @@ class Compiler:
     def header_size(self, blk):
         return 3 + 5 * len(blk.ondays)
 
-    def link(self, blk):
+    def link(self, blk, lang):
         hs = self.header_size(blk)
         code = bytearray(blk.code)
         strings = bytearray(); str_ofs = {}
-        for pos, data in blk.fix_str:
+        for pos, nl, en in blk.fix_str:
+            data = en if (lang == "en" and en is not None) else nl
             if data not in str_ofs:
                 str_ofs[data] = len(strings); strings += data
             code[pos:pos + 2] = struct.pack("<H", hs + len(code) + str_ofs[data])
@@ -400,9 +426,9 @@ class Compiler:
             blk.edges.append(("<ON_DAY>", node))
         raw = bytes(head + code + strings)
         if len(raw) > BLOCK_MAX:
-            raise ScriptError(f"{blk.name}: blok is {len(raw)} bytes (max {BLOCK_MAX}); splits het hoofdstuk met LOAD")
-        blk.raw = raw
-        blk.stats = dict(code=len(code), strings=len(strings), total=len(raw))
+            raise ScriptError(f"{blk.name} ({lang}): blok is {len(raw)} bytes (max {BLOCK_MAX}); splits het hoofdstuk met LOAD")
+        blk.raw[lang] = raw
+        blk.stats[lang] = dict(code=len(code), strings=len(strings), total=len(raw))
 
     def compile(self, script_dir):
         for name, sid in sorted(self.ids["script"].items(), key=lambda kv: kv[1]):
@@ -423,11 +449,16 @@ class Compiler:
             if l["node"] not in self.node_block:
                 raise ScriptError(f"locations.json: {l['id']}: node '{l['node']}' bestaat in geen enkel script")
         for blk in self.blocks: self.compile_block(blk)
-        for blk in self.blocks: self.link(blk)
+        for blk in self.blocks:
+            for lang in LANGS: self.link(blk, lang)
+            # alleen tekst met kleine letters telt: namen als "SAIRA" zijn in beide talen gelijk
+            self.missing_en += sum(1 for _, nl, en in blk.fix_str if en is None and any(1 <= c <= 26 for c in nl))
         used = ({b for blk in self.blocks for _, b in blk.edges} | {blk.node_order[0] for blk in self.blocks}
                 | set(self.ids["node"]) | {l["node"] for l in self.locs})
         warnings = [f"waarschuwing: node '{n}' ({b.name}.ash) wordt nergens gebruikt"
                     for n, b in self.node_block.items() if n not in used]
+        if self.missing_en:
+            warnings.append(f"let op: {self.missing_en} strings zonder Engelse tekst (Nederlands gebruikt)")
         return warnings
 
 
@@ -438,12 +469,15 @@ def c_bytes(b):
 def write_outputs(comp, ids):
     os.makedirs(f"{ROOT}/assets", exist_ok=True); os.makedirs(f"{ROOT}/build", exist_ok=True)
     for blk in comp.blocks:
-        z = zlib.compressobj(9, zlib.DEFLATED, -15)
-        packed = z.compress(blk.raw) + z.flush()
-        with open(f"{ROOT}/assets/{blk.name}.scr", "wb") as f:
-            f.write(struct.pack("<HBBH", LOAD_ADDR, 0x54, 1, len(blk.raw)) + packed)
-        s = blk.stats
-        print(f"{blk.name}.scr: {s['total']} bytes (code {s['code']}, tekst {s['strings']}) -> {len(packed)} gecomprimeerd")
+        for lang in LANGS:
+            raw = blk.raw[lang]
+            z = zlib.compressobj(9, zlib.DEFLATED, -15)
+            packed = z.compress(raw) + z.flush()
+            fn = f"{blk.name}{LANG_SUFFIX[lang]}.scr"
+            with open(f"{ROOT}/assets/{fn}", "wb") as f:
+                f.write(struct.pack("<HBBH", LOAD_ADDR, 0x54, 1, len(raw)) + packed)
+            s = blk.stats[lang]
+            print(f"{fn}: {s['total']} bytes (code {s['code']}, tekst {s['strings']}) -> {len(packed)} gecomprimeerd")
     with open(f"{ROOT}/build/script_graph.txt", "w", encoding="utf-8") as f:
         for blk in comp.blocks:
             f.write(f"[{blk.name}]\n")
@@ -471,14 +505,17 @@ def write_outputs(comp, ids):
         for k, v in datac.LOC_FLAGS.items():
             f.write(f"#define LF_{k} 0x{v:02X}\n")
         f.write(f"#define NSCENES {len(ids['scene'])}\n#define NCHARS {len(ids['char'])}\n"
-                f"#define NSCRIPTS {len(ids['script'])}\n#define NLOCS {len(locs)}\n#define NENODES {len(ids['node'])}\n")
+                f"#define NSCRIPTS {len(ids['script'])}\n#define NLOCS {len(locs)}\n#define NENODES {len(ids['node'])}\n"
+                f"#define NLANGS {len(LANGS)}\n#define LANG_NL 0\n#define LANG_EN 1\n")
         f.write("#endif\n")
     with open(f"{ROOT}/src/data.c", "w") as f:
         f.write("/* gegenereerd door pipeline/scriptc.py - niet met de hand wijzigen */\n#include \"game.h\"\n\n")
-        for kind, ext in (("scene", "scn"), ("char", "pat"), ("script", "scr")):
+        for kind, ext in (("scene", "scn"), ("char", "pat")):
             names = [f'"{n}.{ext}"' for n, _ in sorted(ids[kind].items(), key=lambda kv: kv[1])]
-            if kind != "script": names = ["0"] + names       # id 0 = geen
-            f.write(f"const char* const {kind}_files[] = {{ {', '.join(names)} }};\n")
+            f.write(f"const char* const {kind}_files[] = {{ 0, {', '.join(names)} }};\n")   # id 0 = geen
+        scripts = [n for n, _ in sorted(ids["script"].items(), key=lambda kv: kv[1])]
+        f.write("const char* const script_files[NLANGS][NSCRIPTS] = {\n" + ",\n".join(
+            "    { " + ", ".join(f'"{n}{LANG_SUFFIX[l]}.scr"' for n in scripts) + " }" for l in LANGS) + "\n};\n")
         f.write("\n/* engine-nodes (ids.txt 'node') en aankomst-nodes per locatie: script-id, offset */\nconst noderef_t enodes[] = {\n")
         for name in ids["node"]:
             sid, ptr = comp.node_ref(name)
@@ -495,10 +532,14 @@ def write_outputs(comp, ids):
         f.write("    { 0, { NO_SCRIPT, 0 } }\n};\n")
         f.write("\n/* startwaarden: type, x, y, status, size, trust, job, skill, equip, richness, green, flags */\n")
         f.write("const loc_t loc_init[] = {\n" + "\n".join(datac.c_loc_init(locs)) + "\n};\n\n")
-        f.write("/* namen in screen codes, $FF-afgesloten */\n")
+        f.write("/* namen in screen codes, $FF-afgesloten; per taal */\n")
         for i, l in enumerate(locs):
             f.write(f"static const unsigned char n{i}[] = {{ {c_bytes(screen_codes(l['name'], l['id']) + [EOS])} }};\n")
-        f.write("const unsigned char* const loc_names[] = { " + ", ".join(f"n{i}" for i in range(len(locs))) + " };\n")
+            if l["name_en"] != l["name"]:
+                f.write(f"static const unsigned char e{i}[] = {{ {c_bytes(screen_codes(l['name_en'], l['id']) + [EOS])} }};\n")
+        en = [f"e{i}" if l["name_en"] != l["name"] else f"n{i}" for i, l in enumerate(locs)]
+        f.write("const unsigned char* const loc_names[NLANGS][NLOCS] = {\n    { " + ", ".join(f"n{i}" for i in range(len(locs)))
+                + " },\n    { " + ", ".join(en) + " }\n};\n")
 
 
 def main():

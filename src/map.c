@@ -8,6 +8,7 @@
 #include "sim.h"
 #include "text.h"
 #include "vm.h"
+#include "flight.h"
 #include "map.h"
 
 #define COL_BLACK  0
@@ -20,11 +21,11 @@
 #define COL_LGR    15
 
 #define DISCOVER_RANGE 4       /* cellen van de rechte lijn (Manhattan) */
-#define DAY_FRAMES     20      /* animatie per reisdag */
+#define DAY_FRAMES     75      /* vluchtanimatie per reisdag (1,5 s) */
 
 /* MARKER uit pipeline/mockups.py: %11 = kleur-RAM (markerkleur), %01 = scherm-RAM hoog (binnenkleur) */
 static const unsigned char marker_bm[8] = { 0x00, 0x3C, 0xD7, 0xD7, 0xD7, 0x3C, 0x00, 0x00 };
-static const unsigned char sc_terug[] = { 20, 5, 18, 21, 7, SC_END };     /* "terug" */
+static const unsigned char sc_back[NLANGS][6] = { { 20, 5, 18, 21, 7, SC_END }, { 2, 1, 3, 11, SC_END } };  /* terug / back */
 
 static unsigned char dest_idx[NLOCS + 1];
 static const unsigned char* items[NLOCS + 1];
@@ -85,12 +86,10 @@ static void hook(unsigned char sel)
     if (sel != last_sel) {
         set_blink(last_sel, 1);
         last_sel = sel;
-        txt_title("BESTEMMING");
+        txt_title(L(L("BESTEMMING", "DESTINATION"), "DESTINATION"));
         if (sel < n_items - 1) {
             ui_number(0, 12, travel_days((unsigned char)vars[VAR_LOC], dest_idx[sel]), COL_WHITE);
-            ui_put(0, 14, 4, COL_WHITE);  ui_put(0, 15, 1, COL_WHITE);       /* "da" */
-            ui_put(0, 16, 7, COL_WHITE);  ui_put(0, 17, 5, COL_WHITE);       /* "ge" */
-            ui_put(0, 18, 14, COL_WHITE);                                     /* "n"  */
+            ui_text_at(0, 14, L("dagen", "days"), COL_WHITE);
         }
     }
     if ((frame_count & 15) == 0) {
@@ -124,39 +123,63 @@ static unsigned char discover(unsigned char a, unsigned char b)
     return MAP_CANCEL;
 }
 
-static const char* const land_items[] = { "Landen", "Doorvliegen" };
+static const char* const land_items[NLANGS][2] = { { "Landen", "Doorvliegen" }, { "Land", "Fly on" } };
+
+static unsigned char fast;          /* vuur tijdens de vlucht: rest van de reis zonder animatie */
+
+static void flight_panel(unsigned char to)
+{
+    txt_title(L("ONDERWEG NAAR", "FLYING TO"));
+    txt_clear();
+    ui_line(1, 0, loc_names[lang][to], COL_WHITE);
+}
+
+/* Reisdagen first..last-1 van een reis van `days` dagen: per dag sim_day() en de animatie.
+   Nacht in de tweede helft van de reis (cosmetisch, §4.1). */
+static void fly(unsigned char first, unsigned char last, unsigned char days)
+{
+    unsigned char d;
+    for (d = first; d < last; ++d) {
+        vars[VAR_NACHT] = (d * 2 + 1 >= days) && days > 1;
+        flight_night((unsigned char)vars[VAR_NACHT]);
+        sim_day();
+        if (!fast && flight_frames(DAY_FRAMES)) fast = 1;
+    }
+}
 
 static unsigned char travel(unsigned char from, unsigned char to)
 {
-    unsigned char days, d, hit;
+    unsigned char days = travel_days(from, to), half, hit;
 
+    fast = 0;
     hit = discover(from, to);
-    if (hit != MAP_CANCEL) {
-        vm_char(0);
+    flight_begin();
+    flight_panel(to);
+    if (hit == MAP_CANCEL) {
+        fly(0, days, days);
+    } else {
+        half = days / 2;
+        fly(0, half, days);
+        if (!half && !fast) flight_frames(DAY_FRAMES);   /* altijd even vliegen voor de ontdekking */
         vm_scene(SCENE_WOESTIJN);
         vm_show();
-        txt_title("ONDERWEG");
+        txt_title(L("ONDERWEG", "EN ROUTE"));
         txt_begin();
-        txt_str("De glider scheert over de duinen. Tussen de rotsen stijgt rook op: een kamp van de Kethari.");
-        if (flag_get(FLAG_SAIRA_MEE)) txt_str(" Saira wijst: daar!");
+        txt_str(L("De glider scheert over de duinen. Tussen de rotsen stijgt rook op: een kamp van de Kethari.", "The glider skims over the dunes. Smoke rises between the rocks: a Kethari camp."));
+        if (flag_get(FLAG_SAIRA_MEE)) txt_str(L(" Saira wijst: daar!", " Saira points: there!"));
         txt_show();
-        if (ui_menu_str(land_items, 2) == 0) {
+        if (ui_menu_str(land_items[lang], 2) == 0) {
             locs[hit].status = ST_BEKEND;
             to = hit;
+            if (!half) fly(0, 1, 1);                      /* landen kost minstens een dag */
+        } else {
+            flight_begin();
+            flight_panel(to);
+            fly(half, days, days);
         }
-        txt_clear();
-    }
-
-    days = travel_days(from, to);
-    txt_title("ONDERWEG NAAR");
-    txt_clear();
-    ui_line(1, 0, loc_names[to], COL_WHITE);
-    for (d = 0; d < days; ++d) {
-        vars[VAR_NACHT] = (d * 2 + 1 >= days) && days > 1;   /* nacht in de tweede helft */
-        sim_day();
-        for (hit = 0; hit < DAY_FRAMES; ++hit) ui_wait_frame();
     }
     vars[VAR_NACHT] = 0;
+    flight_night(0);
     game_draw_status();
     return to;
 }
@@ -173,9 +196,9 @@ unsigned char map_run(void)
         draw_marker(i);
         if (i == here) continue;
         dest_idx[n_items] = i;
-        items[n_items++] = loc_names[i];
+        items[n_items++] = loc_names[lang][i];
     }
-    items[n_items++] = sc_terug;
+    items[n_items++] = sc_back[lang];
     vm_show();
 
     last_sel = 0xFE;

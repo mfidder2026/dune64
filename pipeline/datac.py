@@ -36,12 +36,13 @@ def load_locations(path):
         status = d.get("status", "ONBEKEND")
         if status not in LOC_STATUS: raise DataError(f"{where}: status {status!r}")
         if not (0 <= x < MAP_W and 0 <= y < MAP_H): raise DataError(f"{where}: ({x},{y}) buiten de kaart")
-        if len(name) > NAME_MAX: raise DataError(f"{where}: naam langer dan {NAME_MAX} tekens")
+        name_en = d.get("name_en", name)
+        if max(len(name), len(name_en)) > NAME_MAX: raise DataError(f"{where}: naam langer dan {NAME_MAX} tekens")
         flags = 0
         for f in d.get("flags", []):
             if f not in LOC_FLAGS: raise DataError(f"{where}: vlag {f!r}")
             flags |= LOC_FLAGS[f]
-        locs.append(dict(id=lid, name=name, type=LOC_TYPES.index(typ), x=x, y=y,
+        locs.append(dict(id=lid, name=name, name_en=name_en, type=LOC_TYPES.index(typ), x=x, y=y,
                          status=LOC_STATUS.index(status), node=d.get("node"),
                          size=d.get("size", 0), trust=d.get("trust", 0), richness=d.get("richness", 0),
                          flags=flags))

@@ -59,12 +59,16 @@ extern state_t state;
 /* data.c (gegenereerd door scriptc.py) */
 extern const char* const scene_files[];
 extern const char* const char_files[];
-extern const char* const script_files[];
+extern const char* const script_files[NLANGS][NSCRIPTS];
 extern const noderef_t enodes[];
 extern const noderef_t loc_nodes[];
 extern const loc_t loc_init[];
 extern const event_t init_events[];       /* afgesloten met target.script == NO_SCRIPT */
-extern const unsigned char* const loc_names[];
+extern const unsigned char* const loc_names[NLANGS][NLOCS];
+
+/* Taal (LANG_NL / LANG_EN): een voorkeur, geen spelstatus, dus niet in de savegame. */
+extern unsigned char lang;
+#define L(nl, en) (lang ? (en) : (nl))
 
 #define HERE (&locs[(unsigned char)vars[VAR_LOC]])
 

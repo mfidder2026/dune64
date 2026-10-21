@@ -21,6 +21,7 @@
 void ui_draw_frame(void);
 void ui_clear_text(void);
 void ui_text(unsigned char line, const char* s, unsigned char color);  /* PETSCII (C-strings), line 0..5 */
+void ui_text_at(unsigned char line, unsigned char col, const char* s, unsigned char color);  /* idem vanaf kolom col */
 void ui_put(unsigned char line, unsigned char col, unsigned char code, unsigned char color);
 const unsigned char* ui_line(unsigned char line, unsigned char col, const unsigned char* sc, unsigned char color);
 void ui_status(unsigned int day, unsigned int amber, unsigned int warriors, unsigned char green, unsigned char night);

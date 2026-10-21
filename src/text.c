@@ -42,7 +42,7 @@ void txt_num(unsigned int v)
 
 void txt_name(unsigned char loc)
 {
-    const unsigned char* s = loc_names[loc];
+    const unsigned char* s = loc_names[lang][loc];
     while (*s != SC_END) add(*s++);
 }
 

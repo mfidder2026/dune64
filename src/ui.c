@@ -8,6 +8,8 @@
 #define PSCR (SCREEN + PANEL_ROW * 40)
 #define PCOL (COLRAM + PANEL_ROW * 40)
 
+extern unsigned char lang;          /* game.c */
+
 static unsigned char petscii_to_screen(unsigned char c)
 {
     if (c >= 0x40 && c < 0x60) return c - 0x40;   /* a-z (cc65 'a' -> $41) -> 1..26 */
@@ -43,6 +45,12 @@ void ui_clear_text(void)
     for (r = 1; r < 7; ++r) memset(PSCR + r * 40 + TEXT_COL, 32, TEXT_WIDTH);
 }
 
+void ui_text_at(unsigned char line, unsigned char col, const char* s, unsigned char color)
+{
+    unsigned char row = line + 1;
+    while (*s && col < TEXT_WIDTH) { put(row, TEXT_COL + col, petscii_to_screen(*s++), color); ++col; }
+}
+
 void ui_text(unsigned char line, const char* s, unsigned char color)
 {
     unsigned char c = 0, row = line + 1;
@@ -62,7 +70,8 @@ static void num(unsigned char row, unsigned char col, unsigned int v, unsigned c
 void ui_status(unsigned int day, unsigned int amber, unsigned int warriors, unsigned char green, unsigned char night)
 {
     put(1, STAT_COL, night ? UI_MOON : UI_SUN, COL_GOLD);
-    put(1, STAT_COL + 1, 68, COL_YELLOW); put(1, STAT_COL + 2, 65, COL_YELLOW); put(1, STAT_COL + 3, 71, COL_YELLOW); /* DAG */
+    put(1, STAT_COL + 1, 68, COL_YELLOW); put(1, STAT_COL + 2, 65, COL_YELLOW);
+    put(1, STAT_COL + 3, lang ? 89 : 71, COL_YELLOW);       /* DAG / DAY */
     num(1, STAT_COL + 4, day, 3, COL_YELLOW);
     put(2, STAT_COL, UI_AMBER, COL_GOLD);  num(2, STAT_COL + 1, amber, 5, COL_YELLOW);
     put(3, STAT_COL, UI_SWORD, COL_GOLD);  num(3, STAT_COL + 1, warriors, 5, COL_WHITE);

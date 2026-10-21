@@ -51,7 +51,7 @@ static unsigned int rd16(void)
 static void load_script(unsigned char sid)
 {
     if (sid == cur_script) return;
-    if (!disk_load(script_files[sid], LOADBUF) || LOADBUF[0] != MAGIC_SCRIPT) fail(1);
+    if (!disk_load(script_files[lang][sid], LOADBUF) || LOADBUF[0] != MAGIC_SCRIPT) fail(1);
     inflatemem(SCRIPTBUF, LOADBUF + 4);
     cur_script = sid;
 }
@@ -126,6 +126,22 @@ void vm_show(void)
     screen_on = 0x10;
     ui_globe(split_enabled);
     screen_pending = 0;
+}
+
+void vm_forget_scene(void)
+{
+    cur_scene = cur_char = 0;
+    txt_mouth = 0;
+}
+
+void vm_set_lang(unsigned char l)
+{
+    lang = l;
+    game_draw_status();                   /* DAG / DAY */
+    if (cur_script == NO_SCRIPT) return;
+    vm_next.script = cur_script;          /* na de builtin: menu-node opnieuw, in de nieuwe taal */
+    vm_next.node = home.node;
+    cur_script = NO_SCRIPT;
 }
 
 void vm_scene(unsigned char id)
@@ -213,7 +229,7 @@ void vm_run(unsigned char script, unsigned int node)
     unsigned int v;
 
     cur_script = NO_SCRIPT;
-    cur_scene = cur_char = screen_pending = 0;
+    screen_pending = 0;
     vm_next.script = NO_SCRIPT;
     sim_pending.script = NO_SCRIPT;
     load_script(script);
