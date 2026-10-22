@@ -140,7 +140,7 @@
   IF GROEN >= 60
     SCENE oase
   ELSE
-    SCENE grot
+    SCENE kamp
   END
   CHAR none
   SAY "KAMP {loc}" "CAMP {loc}"
@@ -155,7 +155,7 @@
   END
 
 :kamp_bezet
-  SCENE grot
+  SCENE kamp
   CHAR none
   SAY "{loc} - BEZET" "{loc} - OCCUPIED"
   TEXT "Soldaten van het Consortium bewaken de ingang. De Kethari van {loc} zijn gevangen of gevlucht. Alleen met krijgers krijg je dit kamp terug."
@@ -180,7 +180,7 @@
   END
 
 :citadel
-  SCENE vesting
+  SCENE citadel
   CHAR none
   SAY "DE CITADEL" "THE CITADEL"
   IF f_citadel
@@ -196,7 +196,7 @@
   END
 
 :mer
-  SCENE woestijn
+  SCENE handelspost
   CHAR none
   SAY "ZOUTVLAKTE MER" "MER SALT FLAT"
   IF f_verraad

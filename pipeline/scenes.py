@@ -13,7 +13,11 @@ from c64art import *
 import c64gfx as G
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-SERIF = "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf"
+# DejaVu Serif Bold (Linux, waarmee de oorspronkelijke scènes zijn gemaakt); op Windows Georgia Bold
+SERIF = next((f for f in ("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+                          "C:/Windows/Fonts/DejaVuSerif-Bold.ttf", "C:/Windows/Fonts/georgiab.ttf",
+                          "C:/Windows/Fonts/timesbd.ttf") if os.path.exists(f)),
+             "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf")
 SCENES = {}
 
 
@@ -608,7 +612,7 @@ def s_kaart(cv):
 
 
 @scene("EINDE", rows=25)
-def s_einde(cv):
+def s_einde(cv, text="ASHKARA IS VRIJ"):
     """Einde: dageraad, de eerste regenwolken boven een groenende woestijn."""
     sky(cv, cv.all(), 0, 140, [BLU, LBL, LBL, LRD, ORA, YEL], glow=(230, 132, 120, 0.35))
     sun(cv, 230, 132, 18, ramp=(YEL, WHT, WHT))
@@ -624,11 +628,123 @@ def s_einde(cv):
     near = dune_layer(cv, 200, 22, 184, [GRN, LGN], [BLK, GRN], n_peaks=4, depth=30, slant=0.5)
     lake = cv.ellipse(120, 186, 70, 7)
     cv.ramp(lake, 0.5 + 0.4 * np.sin(cv.X / 6), [BLU, LBL, WHT])
-    t = cv.text_mask("ASHKARA IS VRIJ", SERIF, 22, 160, 32, spacing=2, anchor="mm")
+    t = cv.text_mask(text, SERIF, 22, 160, 32, spacing=2, anchor="mm")
     shadow = np.roll(np.roll(t, 2, axis=0), 1, axis=1)
     cv.fill(shadow & ~t, BLK)
     cv.vgrad(t, 22, 42, [WHT, YEL, ORA])
     cv.outline(t | shadow, BLK)
+
+
+@scene("EINDE_EN", rows=25)
+def s_einde_en(cv):
+    """Engels eindbeeld: hetzelfde landschap, tekst ASHKARA IS FREE."""
+    s_einde(cv, text="ASHKARA IS FREE")
+
+
+@scene("HANDELSPOST")
+def s_handelspost(cv):
+    """Zoutvlakte van Mer: wit gebarsten zout, gestreepte kramen, zoutpilaren, kisten."""
+    sky(cv, cv.all(), 0, 60, [BLU, LBL, LBL, LGR, WHT], glow=(70, 20, 80, 0.3))
+    sun(cv, 70, 18, 7, ramp=(YEL, WHT, WHT))
+    mesa(cv, 180, 250, 46, 60, seed=301, ramp=[PUR, LRD, LGR], light_left=False)
+    mesa(cv, 262, 318, 50, 60, seed=302, ramp=[PUR, LRD, LGR], light_left=False)
+    salt = cv.rect(0, 60, 320, 136)
+    n = fbm(cv.h, 160, 12, 303)
+    cv.ramp(salt, np.clip(0.55 + 0.35 * n + (cv.Y - 60) / 160, 0, 1), [LGR, LGR, WHT, WHT])
+    # zeshoekige barsten in perspectief
+    zx = (cv.X - 160) / np.maximum(cv.Y - 52, 1) * 30
+    zy = 300 / np.maximum(cv.Y - 52, 1)
+    cracks = (np.abs(np.sin(zx * 0.9 + np.sin(zy * 1.7))) < 0.08) | (np.abs(np.sin(zy * 2.2 + zx * 0.3)) < 0.06)
+    cv.fill(salt & cracks & (cv.Y > 66), GRY)
+    # zoutpilaren
+    for x, top, w in ((24, 34, 10), (44, 50, 7), (292, 40, 9)):
+        pil = cv.poly([(x - w, 100), (x - w * 0.6, top), (x + w * 0.6, top + 3), (x + w, 100)])
+        cv.ramp(pil, np.clip((cv.X - (x - w)) / (2 * w), 0, 1), [GRY, LGR, WHT])
+        cv.outline(pil, DGR)
+    # kramen met gestreepte luifels
+    for x0, x1, base, c1, c2 in ((70, 132, 100, RED, YEL), (150, 214, 96, BLU, WHT), (226, 282, 104, PUR, ORA)):
+        roof = cv.poly([(x0 - 6, base - 30), (x1 + 6, base - 30), (x1, base - 22), (x0, base - 22)])
+        stripes = ((cv.X - x0) // 8).astype(int) % 2 == 0
+        cv.fill(roof & stripes, c1); cv.fill(roof & ~stripes, c2)
+        cv.outline(roof, BLK)
+        for px in (x0 + 2, x1 - 4):
+            cv.fill(cv.rect(px, base - 22, px + 2, base), BRN)
+        table = cv.rect(x0 + 4, base - 10, x1 - 4, base - 6)
+        cv.ramp(table, 0.5, [BRN, ORA])
+        r = np.random.default_rng(int(x0))
+        for _ in range(5):
+            gx = r.uniform(x0 + 8, x1 - 10)
+            cv.fill(cv.rect(gx, base - 14, gx + 5, base - 10), r.choice([CYN, YEL, GRN, LRD, WHT]))
+        cv.fill(cv.rect(x0 + 4, base - 6, x1 - 4, base - 5), BLK)
+    # kisten op de voorgrond
+    for x, y in ((40, 116), (58, 120), (250, 118)):
+        box = cv.rect(x, y, x + 16, y + 10)
+        cv.ramp(box, 0.5, [BRN, ORA, YEL])
+        cv.outline(box, BLK)
+        cv.fill(cv.rect(x, y + 4, x + 16, y + 5), BRN)
+    cv.fill(cv.rect(0, 134, 320, 136), BLK)
+
+
+@scene("CITADEL")
+def s_citadel(cv):
+    """De Citadel van Kasimir Vorr: rotsmassief, centrale toren, schilddome, zoeklichten."""
+    sky(cv, cv.all(), 0, 100, [BLK, BLK, BLU, PUR, RED, LRD], curve=1.1, glow=(160, 96, 140, 0.3))
+    cv.stars(cv.Y < 50, 60, seed=401, colors=(WHT, LGR, LBL))
+    for x0, ang in ((96, -0.55), (232, 0.5), (160, 0.08)):
+        beam = cv.poly([(x0, 50), (x0 + 5, 50), (x0 + 5 + 150 * ang + 10, -10), (x0 + 150 * ang - 10, -10)])
+        cv.fill(beam & (cv.bx < 0.3), LGR)
+    rock = cv.poly([(0, 136), (0, 112), (50, 100), (96, 78), (124, 66), (200, 64), (232, 80), (280, 98), (320, 104), (320, 136)])
+    rock_wall(cv, rock, 402, ramp=[BLK, BLK, DGR, GRY], light_left=False)
+    walls = cv.rect(92, 52, 236, 74)
+    for tx, tw, th in ((88, 16, 40), (226, 16, 42), (118, 12, 48), (202, 12, 46)):
+        walls |= cv.rect(tx, th, tx + tw, 74)
+        for cx in range(int(tx), int(tx + tw), 5):
+            walls |= cv.rect(cx, th - 3, cx + 3, th)
+    tower = cv.poly([(146, 74), (150, 14), (156, 6), (164, 6), (170, 14), (174, 74)])
+    cv.fill(walls | tower, BLK)
+    cv.fill((walls | tower) & ~np.roll(walls | tower, 1, axis=1) & (cv.Y > 4), DGR)
+    cv.fill(cv.rect(156, 2, 164, 7), RED)
+    r = np.random.default_rng(403)
+    for _ in range(40):
+        x = r.uniform(92, 236); y = r.uniform(12, 72)
+        if cv.px[int(y), int(x / 2)] == BLK and (walls | tower)[int(y), int(x / 2)]:
+            cv.fill(cv.rect(x, y, x + 2, y + 2), r.choice([YEL, ORA, LBL]))
+    # schilddome: gestippelde boog
+    d = np.sqrt(((cv.X - 162) / 104) ** 2 + ((cv.Y - 80) / 82) ** 2)
+    dome = (d > 0.93) & (d < 1.0) & (cv.Y < 80)
+    cv.fill(dome & (cv.bx < 0.55), CYN)
+    inner = (d < 0.93) & (cv.Y < 80) & (cv.px != BLK) & (cv.bx < 0.12)
+    cv.fill(inner, LBL)
+    cv.fill(cv.rect(0, 134, 320, 136), BLK)
+
+
+@scene("KAMP")
+def s_kamp(cv):
+    """Een open Kethari-kamp bij schemering: koepeltenten van huiden, kampvuur, rotswand."""
+    sky(cv, cv.all(), 0, 80, [BLU, PUR, RED, LRD, ORA, YEL], glow=(250, 70, 90, 0.4))
+    sun(cv, 250, 74, 12, ramp=(ORA, YEL, WHT))
+    cliff = cv.poly([(0, 136), (0, 20), (30, 14), (60, 30), (74, 60), (90, 90), (100, 136)])
+    rock_wall(cv, cliff, 501, ramp=[BLK, BRN, RED, LRD], light_left=False)
+    ground = cv.poly([(0, 136), (0, 94), (120, 88), (320, 92), (320, 136)])
+    n = fbm(cv.h, 160, 10, 502)
+    cv.ramp(ground & ~cliff, np.clip(0.3 + 0.5 * n, 0, 1), [BRN, ORA, ORA, YEL])
+    for cx, base, rx, ry, col in ((132, 104, 34, 26, [BLK, BRN, ORA, LRD]), (204, 98, 26, 20, [BLK, BRN, RED, LRD]),
+                                  (272, 108, 30, 24, [BLK, BRN, ORA, YEL])):
+        tent = cv.ellipse(cx, base, rx, ry) & (cv.Y < base)
+        cv.ramp(tent, np.clip(0.2 + 0.7 * (cv.X - (cx - rx)) / (2 * rx) - (cv.Y - base + ry) * 0.004, 0, 1), col)
+        seams = tent & (np.abs(((cv.X - cx) / rx) * 3 - np.round(((cv.X - cx) / rx) * 3)) < 0.08)
+        cv.fill(seams, BRN)
+        cv.outline(tent, BLK)
+        cv.fill(cv.poly([(cx - 6, base), (cx, base - ry * 0.55), (cx + 6, base)]), BLK)
+    # kampvuur met rook
+    cv.fill(cv.rect(176, 122, 196, 125), BRN)
+    flame = cv.poly([(178, 122), (183, 108), (186, 114), (190, 104), (194, 122)])
+    cv.ramp(flame, np.clip((122 - cv.Y) / 18, 0, 1), [RED, ORA, YEL, WHT])
+    smoke = cv.ellipse(190, 84, 10, 14) | cv.ellipse(196, 64, 12, 12) | cv.ellipse(206, 46, 14, 10)
+    cv.fill(smoke & (cv.bx < 0.35), GRY)
+    glow = cv.ellipse(186, 124, 40, 8) & ~flame
+    cv.fill(glow & (cv.bx < 0.4) & (cv.px != BLK), YEL)
+    cv.fill(cv.rect(0, 134, 320, 136), BLK)
 
 
 # ---------------------------------------------------------------- build

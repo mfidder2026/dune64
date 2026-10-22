@@ -1,7 +1,7 @@
 /* gegenereerd door pipeline/scriptc.py - niet met de hand wijzigen */
 #include "game.h"
 
-const char* const scene_files[] = { 0, "titel.scn", "ruimte.scn", "raadzaal.scn", "balkon.scn", "comms.scn", "hangar.scn", "kaart.scn", "woestijn.scn", "kloof.scn", "grot.scn", "oogst.scn", "nacht.scn", "storm.scn", "vesting.scn", "oase.scn", "einde.scn", "vlucht.scn" };
+const char* const scene_files[] = { 0, "titel.scn", "ruimte.scn", "raadzaal.scn", "balkon.scn", "comms.scn", "hangar.scn", "kaart.scn", "woestijn.scn", "kloof.scn", "grot.scn", "oogst.scn", "nacht.scn", "storm.scn", "vesting.scn", "oase.scn", "einde.scn", "vlucht.scn", "handelspost.scn", "citadel.scn", "kamp.scn", "einde_en.scn" };
 const char* const char_files[] = { 0, "doran.pat", "vesna.pat", "vorr.pat", "mardo.pat", "saira.pat", "tarik.pat" };
 const char* const script_files[NLANGS][NSCRIPTS] = {
     { "h1.scr", "h1w.scr", "h2.scr", "h4.scr" },

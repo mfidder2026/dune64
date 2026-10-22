@@ -325,7 +325,7 @@ static void handel(void)
 static void einde(void)
 {
     vm_char(0);
-    vm_scene(SCENE_EINDE);             /* volledig scherm (25 rijen): geen paneel */
+    vm_scene(lang ? SCENE_EINDE_EN : SCENE_EINDE);   /* volledig scherm (25 rijen): geen paneel */
     vm_show();
     ui_wait_fire();
     longjmp(restart, 1);

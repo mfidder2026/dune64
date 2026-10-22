@@ -61,6 +61,8 @@ static unsigned char test_poll(void)
     case 'V': vars[VAR_DAY] = 33; return 0;                /* volgende dag: Verraad (dag 34) */
     case 'X': test_army(); return 0;                       /* klaar voor H4/H5 */
     case 'G': test_green(); return 0;                      /* alle kampen groen */
+    case 'E': { unsigned char i; for (i = 0; i < NEVENTS; ++i) events[i].target.script = NO_SCRIPT; }
+              return 0;                                    /* geen verhaal-events: pure simulatie */
     }
     return 0;             /* 'W' en de rest: wachten */
 }

@@ -19,6 +19,10 @@ An adventure/strategy game for the **Commodore 64**, inspired by the structure o
   <img src="docs/screenshots/green-ending.png" width="48%" alt="The green ending: the Citadel surrenders">
 </p>
 <p align="center">
+  <img src="docs/screenshots/market.png" width="48%" alt="The traders of Mer on the salt flat">
+  <img src="docs/screenshots/citadel.png" width="48%" alt="The final assault on the Citadel">
+</p>
+<p align="center">
   <img src="docs/screenshots/saira.png" width="48%" alt="Saira at the Red Gorge">
   <img src="docs/screenshots/ending.png" width="48%" alt="Ashkara is free">
 </p>
@@ -73,7 +77,7 @@ x64sc -autostart ashkara.d64
 On a real C64 or a C64 Ultimate, mount the D64 and `LOAD"*",8,1` / `RUN`. A small boot program loads first; it installs the fastloader on a 1541 and loads the game with it. The screen shows `P` and `F` when that works, or `K` when it falls back to the Kernal (for example on an SD2IEC). Keep only drive 8 switched on while playing (the fastloader uses the ATN line).
 
 ### Real hardware
-The game has been tested in VICE with cycle-exact 1541 emulation (true drive emulation), on PAL and NTSC, but not yet on a real machine. To check your setup, use the diagnostic disk from the release (or `python build.py fltest`). `fltest.d64` loads a few files via the Kernal and via the fastloader and compares length, checksum and load time; it should report "5 van 5 goed".
+The game has been tested in VICE with cycle-exact 1541 emulation (true drive emulation), on PAL and NTSC. On real hardware the game itself works through the Kernal, but the fastloader is not yet confirmed there. To check your setup, use the diagnostic disk from the release (or `python build.py fltest`). `fltest.d64` shows which drive answers, the fastloader's handshake reply, and length, checksum and load time per file via the Kernal and via the fastloader. All lines should read "ok", with a ping of `a5`.
 
 **Controls:** joystick in port 2 or the cursor keys to choose, and fire, Return or Space to confirm or turn the page. On the map, left/right pages through the destinations. **K** opens the map, **F7** opens the save/load/language menu, **F1** toggles the music and **F3** the sound effects. You can also load a saved game from the start menu after the title screen.
 

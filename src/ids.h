@@ -18,6 +18,10 @@
 #define SCENE_OASE 15
 #define SCENE_EINDE 16
 #define SCENE_VLUCHT 17
+#define SCENE_HANDELSPOST 18
+#define SCENE_CITADEL 19
+#define SCENE_KAMP 20
+#define SCENE_EINDE_EN 21
 #define CHAR_DORAN 1
 #define CHAR_VESNA 2
 #define CHAR_VORR 3
@@ -117,7 +121,7 @@
 #define LF_LICHTEND 0x04
 #define LF_GESCHENK 0x08
 #define LF_GESPROKEN 0x10
-#define NSCENES 17
+#define NSCENES 21
 #define NCHARS 6
 #define NSCRIPTS 4
 #define NLOCS 19

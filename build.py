@@ -25,7 +25,8 @@ BUILD = ROOT / "build"
 EXE = ".exe" if os.name == "nt" else ""
 
 SCENES = ["titel", "ruimte", "raadzaal", "balkon", "comms", "hangar", "kaart", "woestijn", "kloof",
-          "grot", "oogst", "nacht", "storm", "vesting", "oase", "einde", "vlucht"]
+          "grot", "oogst", "nacht", "storm", "vesting", "oase", "einde", "vlucht",
+          "handelspost", "citadel", "kamp", "einde_en"]
 CHARS = ["doran", "vesna", "vorr", "mardo", "saira", "tarik"]
 GAME_SRC = ["main.c", "gfx.c", "ui.c", "input.c", "disk.c", "game.c", "text.c", "vm.c", "builtin.c", "sim.c", "map.c", "flight.c", "battle.c", "data.c", "irq.s", "music.s", "fastload.s"]
 
@@ -68,7 +69,11 @@ TESTS = {
     # (X en G pas in het raadzaal-menu: dat hangt er niet van af; dan een dag rusten)
     "groen": (FORT_START + "DDF" + "XG" + RUST_FORT + "F" * 8 + "W", list(range(60, 131, 10))),
     # 60 speldagen zonder Tiende (T), met oogsten: geen crash, dag ~63
-    "days60": (TO_OOGST + "T" + RUST_GROT * 60 + "W", [240, 400, 560, 700]),
+    "days60": (TO_OOGST + "TE" + RUST_GROT * 60 + "W", [240, 480, 720, 800, 860]),
+    # nieuwe scènes: leger klaar (X), via de kaart naar Mer (17x omlaag), handelsmenu, terug,
+    # kaart -> Sheb-Anar (gewoon Kethari-kamp)
+    "markt": (TO_OOGST + "X" + "DDDDDDDF" "DDF" + "D" * 17 + "F" + "FF" "F" + "DDDF" + "FF" + "DF" + "DDF" + "W",
+              list(range(110, 231, 12))),
     # overvallen aan (O): rusten tot Ur-Kesh overvallen wordt -> bericht -> dag erna game over
     "raid": (TO_OOGST + "TO" + RUST_GROT * 40 + "W", [160, 240, 320, 400, 480]),
 }
@@ -194,6 +199,8 @@ def game(defines=(), out=None):
     flags = []
     for d in defines:
         flags += ["-D", d]
+    if "TESTMODE" in defines:   # testtoetsen + lange invoerreeksen: 256 bytes minder stack
+        flags += ["-Wl", "-D,__STACKSIZE__=0x0300"]
     raw = out.with_name("ashkara.raw")
     run([cl65, "-t", "c64", "-O", "-I", SRC, "-I", BUILD, *flags, "-C", SRC / "ashkara.cfg",
          "-m", out.with_suffix(".map"), "-o", raw] + [SRC / f for f in GAME_SRC])

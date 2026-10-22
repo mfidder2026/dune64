@@ -21,6 +21,10 @@ scene vesting
 scene oase
 scene einde
 scene vlucht
+scene handelspost
+scene citadel
+scene kamp
+scene einde_en
 
 ; --- personages (bestand: assets/<naam>.pat) ---
 char doran

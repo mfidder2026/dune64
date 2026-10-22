@@ -129,14 +129,14 @@ Elke regel is een echt C64-scherm; zie `mockups/NN_*.png`. De demo-diskette loop
 |---|---|---|
 | Fort Varo | `RAADZAAL`, `BALKON`, `COMMS`, `HANGAR` | Praat met … / Naar balkon / Naar comms / Naar hangar / Kaart |
 | Rode Kloof (kamp 1) | `KLOOF` → `GROT` | Binnengaan / Praat met Saira / Vertrek |
-| Overige kampen | `KLOOF` of `GROT` (later: varianten met een andere kleur of personages) | Werven / Taak geven / Status / Vertrek |
+| Overige kampen | `KAMP` (open kamp met koepeltenten; `OASE` als het kamp groen is) | Werven / Taak geven / Status / Vertrek |
 | Diepe zandzee, oogstvelden | `WOESTIJN`, `OOGST`, `NACHT` | Oogstmachine plaatsen / Verder |
 | Voorposten van het Consortium | `VESTING` | Aanvallen / Verkennen / Terugtrekken |
-| Zoutvlakte van Mer (handelaars) | `WOESTIJN` (later een eigen scène) | Kopen / Verkopen / Vertrek |
+| Zoutvlakte van Mer (handelaars) | `HANDELSPOST` (zoutvlakte met kramen) | Handelen / Kaart |
 | Vergroende kampen | `OASE` | Status / Vertrek |
-| De Citadel | `VESTING` (variant) | Eindaanval |
+| De Citadel | `CITADEL` (eigen scène: toren onder een schilddome) | Eindaanval |
 
-Nieuwe scènes (variant-grot, handelspost, Citadel-interieur) staan in de backlog (§14) en volgen dezelfde pijplijn (§13).
+De eigen scènes voor de handelspost, de Citadel en de gewone kampen zijn er (procedureel, `pipeline/scenes.py`). Het eindbeeld bestaat ook in het Engels (`EINDE_EN`, "ASHKARA IS FREE"); `@EINDE` kiest op de taal. Een Citadel-interieur en grotvarianten kunnen er later bij en volgen dezelfde pijplijn (§13).
 
 ---
 
@@ -573,7 +573,14 @@ Een eigen 2-bit-loader: `src/drive/drive.s` draait op `$0500` in de 1541 (M-W in
 Het eerste bestand op de diskette, `ashkara` (`src/boot/boot.s`, ~1,7 KB, geen C-runtime), laadt via de Kernal in een paar seconden. Het kopieert zichzelf naar `$C000`, zet de drivecode met M-W/M-E in de 1541 (dezelfde `drive.s`, en `fastload.s` ongewijzigd: de bootloader levert zelf de zero page en een mini-`popax`), en laadt het hoofdprogramma `main` (exomizer-sfx) snel naar zijn eigen laadadres. Daarna springt hij naar het adres uit de BASIC-SYS-regel. Op het scherm verschijnt **P** (drive antwoordt) en **F** (snel geladen); **K** betekent: via de Kernal (geen 1541, of de fastloader mislukte). Op `$02FC` laat hij "FL" achter: `disk_init()` in het spel ziet dan dat de drivecode al draait en kanaal 15 open is, en installeert niet opnieuw (dat zou via de Kernal moeten, terwijl de drive in onze lus zit). De bootloader maakt zijn BSS zelf leeg: zonder dat begon `atnstate` willekeurig en klopte de ATN-fase niet.
 
 **Gemeten** (true drive emulation, 1541-II): titelscherm na **~32 s**, was ~60 s (v0.6.0: hoofdprogramma via de Kernal).
-- **Diagnose:** `python build.py fltest` maakt `build/fltest.d64`. Die laadt een paar bestanden via de Kernal en via de fastloader en toont lengte, checksum en laadtijd. Draai dat als eerste op echte hardware.
+- **Marges voor echte hardware:** VICE schakelt IEC-lijnen direct om, maar op een echte kabel duurt het een paar microseconden voordat een losgelaten lijn weer hoog is. Daarom wacht de drive ~20 µs na het loslaten van zijn lijnen voordat hij een commandopaar leest. De C64 neemt ~135 cycli per commandopaar, leest in de snelle richting 36 cycli na elke wisseling, en wacht 300 ms na M-E. (Eerste test op echt ijzer, met marges van 4 µs en 90 ms: de ping kwam niet terug; de verruimde versie moet nog op echt ijzer getest worden.)
+- **Diagnose:** `python build.py fltest` maakt `build/fltest.d64` (v2):
+  - de **identiteit van drive 8** (status na een `UI`-reset, bijvoorbeeld "73,CBM DOS V2.6 1541" of "73,SD2IEC …");
+  - het **ping-antwoord** (`a5` = goed, `00` = drivecode draait niet);
+  - per bestand lengte, checksum en laadtijd via de Kernal en via de fastloader;
+  - "laden naar het eigen adres", gecontroleerd op inhoud: cc65's `cbm_load` geeft daar het eindadres terug.
+
+  Draai dit als eerste op echte hardware.
 
 ### 11.2 Laadsnelheid
 - Met de standaard-Kernal en een echte 1541 haal je ongeveer 300–400 B/s. Een scène van 2 KB kost dan **5–7 s**, plus ~1 s uitpakken. Speelbaar, maar traag.
@@ -708,7 +715,7 @@ python pipeline/c64gfx.py patch art/SCENE.png art/SCENE+X.png art/X_m1.png art/X
 ## 16. Bijlagen
 
 ### A. Scènelijst (assets)
-`titel` (25) · `ruimte` · `raadzaal` · `balkon` · `comms` · `hangar` · `kaart` · `woestijn` · `kloof` · `grot` · `oogst` · `nacht` · `storm` · `vesting` · `oase` · `einde` (25). Previews staan in `preview/`, bronkunst in `art/`.
+`titel` (25) · `ruimte` · `raadzaal` · `balkon` · `comms` · `hangar` · `kaart` · `woestijn` · `kloof` · `grot` · `oogst` · `nacht` · `storm` · `vesting` · `oase` · `einde` (25) · `vlucht` (kleurcycli, `pipeline/flight.py`) · `handelspost` · `citadel` · `kamp` · `einde_en` (25). De tekst op de eindbeelden gebruikt DejaVu Serif Bold (Linux) of Georgia Bold (Windows). Previews staan in `preview/`, bronkunst in `art/`.
 
 ### D. Checklist echte hardware (fase 5)
 Getest in VICE 3.9: PAL en NTSC, virtual device (Kernal) en true drive emulation (1541-II, fastloader), opslaan/laden met fastloader. Nog te doen op echt ijzer:
