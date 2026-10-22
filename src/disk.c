@@ -15,6 +15,7 @@ unsigned char __fastcall__ fl_command(unsigned char cmd);           /* fastload.
 unsigned int  __fastcall__ fl_load(const char* name, void* addr);
 
 static unsigned char fast;          /* 1 = drivecode draait, bus is van ons */
+unsigned char disk_ping_reply;      /* diagnose (tests/fltest.c): antwoord op de laatste ping */
 static unsigned char have_code;     /* drivecode staat onder de I/O */
 
 static unsigned char drive(void)
@@ -63,8 +64,9 @@ unsigned char disk_fast_install(void)
     }
     cmd[2] = 'e'; cmd[3] = (unsigned char)DRIVE_ADDR; cmd[4] = (unsigned char)(DRIVE_ADDR >> 8);
     cbm_write(15, cmd, 5);                                  /* M-E: de drive start onze code */
-    wait_frames(3);
-    if (fl_command(3) == PING_REPLY) {
+    wait_frames(12);                                        /* ~300 ms */
+    disk_ping_reply = fl_command(3);
+    if (disk_ping_reply == PING_REPLY) {
         fast = 1;                   /* kanaal 15 blijft open tot fl_command(2) */
         return 1;
     }

@@ -233,6 +233,14 @@ getbyte:
         ldy #4
 @p:     jsr waitatn
         sta VIA1PB            ; onze lijnen los, ATNA goed
+        nop                   ; ~20 us: een echte kabel heeft stijgtijd nodig (VICE niet);
+        nop                   ; X niet gebruiken, die is de index in de naamlus
+        nop
+        nop
+        nop
+        nop
+        nop
+        nop
         nop
         nop
         lda VIA1PB

@@ -17,6 +17,7 @@ void          disk_init(void);          /* eerst: fastloader al actief via de bo
 void          disk_set_drive_code(void);
 unsigned char disk_fast_install(void);
 unsigned char disk_fast_active(void);
+extern unsigned char disk_ping_reply;   /* $A5 = goed; voor de diagnose */
 
 /* kopiëren van/naar de RAM onder de I/O ($D000-$DFFF) */
 void io_copy(void* dst, const void* src, unsigned int n);

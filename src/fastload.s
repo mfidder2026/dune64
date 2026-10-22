@@ -23,7 +23,7 @@ len:        .res 2
 
         .segment "CODE"
 
-delay:  ldx #12                     ; ~75 cycli incl. jsr/rts (drive heeft er ~45 nodig)
+delay:  ldx #24                     ; ~135 cycli incl. jsr/rts (drive leest na ~70)
 :       dex
         bne :-
         rts
@@ -107,7 +107,11 @@ recvbyte:
         eor #$FF
         rts
 
-d28:    nop                         ; jsr + 6 nops + rts: lezen 28 cycli na het schrijven
+d28:    nop                         ; jsr + 10 nops + rts: lezen 36 cycli na het schrijven
+        nop
+        nop
+        nop
+        nop
         nop
         nop
         nop
@@ -178,7 +182,8 @@ _fl_command:
 
 ; ------------------------------------------------------------------ blok ontvangen (snel)
 ; count bytes naar (ptr1),Y. Per paar: ATN wisselen, en in de wachttijd het vorige paar
-; verwerken; tussen schrijven en lezen zitten >= 20 cycli (de drive antwoordt binnen 13).
+; verwerken; tussen schrijven en lezen zitten >= 28 cycli (de drive antwoordt binnen 13, plus
+; stijgtijd van een echte kabel).
 ; Een badline of IRQ maakt de wachttijd alleen langer. ptr2 = va/vr (zero page, snel).
 recvblock:
         ldy #0
@@ -196,10 +201,18 @@ recvblock:
         nop
         nop
         nop
+        nop
+        nop
+        nop
+        nop
         lda $DD00
         sta tmp2
         lda ptr2+1                  ; paar 1: ATN los
         sta $DD00
+        nop
+        nop
+        nop
+        nop
         lda tmp2
         asl a
         ror tmp1
@@ -209,6 +222,10 @@ recvblock:
         sta tmp2
         lda ptr2                    ; paar 2
         sta $DD00
+        nop
+        nop
+        nop
+        nop
         lda tmp2
         asl a
         ror tmp1
@@ -218,6 +235,10 @@ recvblock:
         sta tmp2
         lda ptr2+1                  ; paar 3
         sta $DD00
+        nop
+        nop
+        nop
+        nop
         lda tmp2
         asl a
         ror tmp1
